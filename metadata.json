@@ -1,0 +1,8 @@
+{
+  "name": "Lyon CleanManager Pro",
+  "description": "Système complet de gestion pour entreprise de nettoyage à Lyon : RH, planning intelligent, cartographie GIS et assistance IA.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
