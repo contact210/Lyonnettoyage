@@ -1,12 +1,18 @@
 
 import React, { useState } from 'react';
 import { Boxes } from 'lucide-react';
-import { WholesaleProduct } from '../types';
-import { DEFAULT_WHOLESALE_SETTINGS, MOCK_WHOLESALE_PRODUCTS } from '../constants';
+import { WholesaleCustomer, WholesaleOrder, WholesaleProduct } from '../types';
+import {
+  DEFAULT_WHOLESALE_SETTINGS,
+  MOCK_WHOLESALE_CUSTOMERS,
+  MOCK_WHOLESALE_ORDERS,
+  MOCK_WHOLESALE_PRODUCTS
+} from '../constants';
 import { usePersistentState } from '../hooks/usePersistentState';
 import Catalog from './wholesale/Catalog';
+import Customers from './wholesale/Customers';
 
-type SubTab = 'catalog';
+type SubTab = 'catalog' | 'customers';
 
 const STORAGE = 'cleanmanager.wholesale.v1';
 
@@ -17,9 +23,14 @@ const upsert = <T extends { id: string }>(list: T[], item: T) =>
 const Wholesale: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('catalog');
   const [products, setProducts] = usePersistentState<WholesaleProduct[]>(`${STORAGE}.products`, MOCK_WHOLESALE_PRODUCTS);
+  const [customers, setCustomers] = usePersistentState<WholesaleCustomer[]>(`${STORAGE}.customers`, MOCK_WHOLESALE_CUSTOMERS);
+  const [orders] = usePersistentState<WholesaleOrder[]>(`${STORAGE}.orders`, MOCK_WHOLESALE_ORDERS);
   const [settings] = usePersistentState(`${STORAGE}.settings`, DEFAULT_WHOLESALE_SETTINGS);
 
-  const tabs: { id: SubTab; label: string }[] = [{ id: 'catalog', label: 'Catalogue' }];
+  const tabs: { id: SubTab; label: string }[] = [
+    { id: 'catalog', label: 'Catalogue' },
+    { id: 'customers', label: 'Clients pro' }
+  ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -47,6 +58,15 @@ const Wholesale: React.FC = () => {
 
       {activeSubTab === 'catalog' && (
         <Catalog products={products} settings={settings} onSave={p => setProducts(list => upsert(list, p))} />
+      )}
+
+      {activeSubTab === 'customers' && (
+        <Customers
+          customers={customers}
+          orders={orders}
+          settings={settings}
+          onSave={c => setCustomers(list => upsert(list, c))}
+        />
       )}
     </div>
   );
