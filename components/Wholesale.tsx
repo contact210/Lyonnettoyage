@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 import { Boxes } from 'lucide-react';
 import {
   Activity,
+  ActivityType,
   CompanySettings,
   CrmTask,
   Lead,
+  LeadStage,
   OrderStatus,
   PurchaseOrder,
   StockMovement,
@@ -41,7 +43,11 @@ import {
   recordSupplierInvoice,
   reservedQuantities
 } from '../services/wholesaleStock';
+import { completeTask, convertLead, moveLead } from '../services/wholesaleCrm';
 import Catalog from './wholesale/Catalog';
+import Crm from './wholesale/Crm';
+import { ConvertDetails, CrmActions } from './wholesale/CrmPipeline';
+import { LogInput } from './wholesale/CrmShared';
 import Customers from './wholesale/Customers';
 import Orders from './wholesale/Orders';
 import Overview from './wholesale/Overview';
@@ -51,7 +57,7 @@ import Settings, { WholesaleBackup } from './wholesale/Settings';
 import Stock from './wholesale/Stock';
 import Suppliers from './wholesale/Suppliers';
 
-type SubTab = 'overview' | 'orders' | 'customers' | 'purchases' | 'suppliers' | 'stock' | 'catalog' | 'profitability' | 'settings';
+type SubTab = 'overview' | 'crm' | 'orders' | 'customers' | 'purchases' | 'suppliers' | 'stock' | 'catalog' | 'profitability' | 'settings';
 
 const STORAGE = 'cleanmanager.wholesale.v1';
 
@@ -179,6 +185,52 @@ const Wholesale: React.FC = () => {
     setActiveSubTab('purchases');
   };
 
+  const startQuote = (customerId: string) => {
+    setNewOrderFor(customerId);
+    setActiveSubTab('orders');
+  };
+
+  const newTask = (ref: { leadId?: string; customerId?: string }, title: string, dueDate: string): CrmTask => ({
+    id: newId('task'),
+    dueDate,
+    title,
+    ...ref,
+    done: false,
+    createdDate: todayISO()
+  });
+
+  const crmActions: CrmActions = {
+    onSaveLead: lead => setLeads(list => upsert(list, lead)),
+    onMoveLead: (lead: Lead, to: LeadStage, lostReason?: string) =>
+      attempt(() => {
+        const moved = moveLead(lead, to, todayISO(), lostReason);
+        setLeads(list => upsert(list, moved));
+      }),
+    onConvert: (lead: Lead, details: ConvertDetails) =>
+      attempt(() => {
+        const today = todayISO();
+        const result = convertLead(lead, details, { customers, today });
+        setLeads(list => upsert(list, result.lead));
+        setCustomers(list => [...list, result.customer]);
+        // L'historique du prospect suit le nouveau client.
+        setActivities(list => [
+          ...list.map(a => (a.leadId === lead.id ? { ...a, customerId: result.customer.id } : a)),
+          { id: newId('act'), date: today, type: ActivityType.NOTE, subject: 'Prospect converti en client', leadId: lead.id, customerId: result.customer.id }
+        ]);
+        setCrmTasks(list => list.map(t => (t.leadId === lead.id ? { ...t, customerId: result.customer.id } : t)));
+      }),
+    onLog: (ref, input: LogInput) => {
+      setActivities(list => [...list, { id: newId('act'), ...input.activity, ...ref }]);
+      if (input.followUp) {
+        const followUp = input.followUp;
+        setCrmTasks(list => [...list, newTask(ref, followUp.title, followUp.dueDate)]);
+      }
+    },
+    onAddTask: (ref, title, dueDate) => setCrmTasks(list => [...list, newTask(ref, title, dueDate)]),
+    onCompleteTask: task => setCrmTasks(list => upsert(list, completeTask(task, todayISO()))),
+    onStartQuote: startQuote
+  };
+
   const restore = (data: WholesaleBackup) => {
     setProducts(data.products);
     setCustomers(data.customers);
@@ -192,6 +244,7 @@ const Wholesale: React.FC = () => {
 
   const tabs: { id: SubTab; label: string }[] = [
     { id: 'overview', label: "Vue d'ensemble" },
+    { id: 'crm', label: 'CRM' },
     { id: 'orders', label: 'Ventes' },
     { id: 'customers', label: 'Clients' },
     { id: 'purchases', label: 'Achats' },
@@ -230,6 +283,8 @@ const Wholesale: React.FC = () => {
         <Overview orders={orders} products={products} purchases={purchases} settings={settings} onGoTo={setActiveSubTab} />
       )}
 
+      {activeSubTab === 'crm' && <Crm leads={leads} activities={activities} tasks={crmTasks} {...crmActions} />}
+
       {activeSubTab === 'orders' && (
         <Orders
           orders={orders}
@@ -266,10 +321,7 @@ const Wholesale: React.FC = () => {
           orders={orders}
           settings={settings}
           onSave={c => setCustomers(list => upsert(list, c))}
-          onNewOrder={customerId => {
-            setNewOrderFor(customerId);
-            setActiveSubTab('orders');
-          }}
+          onNewOrder={startQuote}
         />
       )}
 
