@@ -3,11 +3,16 @@ import {
   OrderLine,
   OrderStatus,
   PriceTier,
+  StockMovement,
+  StockMovementType,
   WholesaleCustomer,
   WholesaleOrder,
   WholesaleProduct,
   WholesaleSettings
 } from '../types';
+
+export const newId = (prefix: string) =>
+  `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 // Les frais de livraison sont facturés au taux normal.
 export const SHIPPING_VAT_RATE = 20;
@@ -16,6 +21,16 @@ export const SHIPPING_VAT_RATE = 20;
 export const round2 = (n: number) => {
   const scaled = n * 100;
   return (Math.sign(scaled) * Math.round(Math.abs(scaled) + 1e-9)) / 100;
+};
+
+// Coûts unitaires gardés à 4 décimales pour que le CMP ne dérive pas au fil des réceptions.
+export const round4 = (n: number) => Math.round(n * 10000) / 10000;
+
+// Coût moyen pondéré après une entrée de `quantity` unités au coût `unitCost`.
+export const weightedAverageCost = (stock: number, currentCost: number, quantity: number, unitCost: number) => {
+  const before = Math.max(stock, 0);
+  if (before + quantity <= 0) return round4(unitCost);
+  return round4((before * currentCost + quantity * unitCost) / (before + quantity));
 };
 
 export const formatEUR = (n: number) =>
@@ -249,25 +264,58 @@ export const applyStatusChange = (
     settings: WholesaleSettings;
     today: string;
   }
-): { order: WholesaleOrder; products: WholesaleProduct[] } => {
+): { order: WholesaleOrder; products: WholesaleProduct[]; movements: StockMovement[] } => {
   const from = order.status;
   if (!ALLOWED_TRANSITIONS[from].includes(to)) {
     throw new Error(`Passage impossible de « ${from} » à « ${to} ».`);
   }
 
   let products = ctx.products;
+  let lines = order.lines;
+  const movements: StockMovement[] = [];
   const qty = quantitiesByProduct(order.lines);
+  const movement = (p: WholesaleProduct, type: StockMovementType, quantity: number, unitCost: number): StockMovement => ({
+    id: newId('mvt'),
+    date: ctx.today,
+    productId: p.id,
+    sku: p.sku,
+    type,
+    quantity,
+    unitCost,
+    stockAfter: p.stock,
+    reference: order.number
+  });
 
   if (!holdsStock(from) && holdsStock(to)) {
     const blocking = checkOrder(order.lines, products, ctx.settings).filter(i => i.blocking);
     if (blocking.length > 0) throw new Error(blocking.map(i => i.message).join('\n'));
-    products = products.map(p => (qty.has(p.id) ? { ...p, stock: p.stock - qty.get(p.id)! } : p));
+    // Le coût des ventes est figé au CMP du jour de la sortie de stock.
+    lines = lines.map(l => {
+      const p = products.find(x => x.id === l.productId);
+      return p ? { ...l, unitCost: p.costPrice } : l;
+    });
+    products = products.map(p => {
+      if (!qty.has(p.id)) return p;
+      const out = { ...p, stock: p.stock - qty.get(p.id)! };
+      movements.push(movement(out, StockMovementType.SALE, -qty.get(p.id)!, p.costPrice));
+      return out;
+    });
   } else if (holdsStock(from) && !holdsStock(to)) {
-    products = products.map(p => (qty.has(p.id) ? { ...p, stock: p.stock + qty.get(p.id)! } : p));
+    // Retour en stock au coût de sortie, qui entre dans le CMP.
+    products = products.map(p => {
+      if (!qty.has(p.id)) return p;
+      const back = qty.get(p.id)!;
+      const own = lines.filter(l => l.productId === p.id);
+      const cost = round4(own.reduce((s, l) => s + l.quantity * l.unitCost, 0) / back);
+      const updated = { ...p, stock: p.stock + back, costPrice: weightedAverageCost(p.stock, p.costPrice, back, cost) };
+      movements.push(movement(updated, StockMovementType.SALE_CANCEL, back, cost));
+      return updated;
+    });
   }
 
   const updated: WholesaleOrder = {
     ...order,
+    lines,
     status: to,
     history: [...order.history, { date: ctx.today, status: to }]
   };
@@ -287,5 +335,5 @@ export const applyStatusChange = (
     updated.paidDate = ctx.today;
   }
 
-  return { order: updated, products };
+  return { order: updated, products, movements };
 };

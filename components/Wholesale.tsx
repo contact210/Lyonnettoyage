@@ -1,10 +1,22 @@
 
 import React, { useState } from 'react';
 import { Boxes } from 'lucide-react';
-import { CompanySettings, OrderStatus, WholesaleCustomer, WholesaleOrder, WholesaleProduct } from '../types';
+import {
+  CompanySettings,
+  OrderStatus,
+  PurchaseOrder,
+  StockMovement,
+  Supplier,
+  WholesaleCustomer,
+  WholesaleOrder,
+  WholesaleProduct
+} from '../types';
 import {
   DEFAULT_COMPANY_SETTINGS,
   DEFAULT_WHOLESALE_SETTINGS,
+  MOCK_PURCHASES,
+  MOCK_STOCK_MOVEMENTS,
+  MOCK_SUPPLIERS,
   MOCK_WHOLESALE_CUSTOMERS,
   MOCK_WHOLESALE_ORDERS,
   MOCK_WHOLESALE_PRODUCTS
@@ -31,6 +43,9 @@ const Wholesale: React.FC = () => {
   const [products, setProducts] = usePersistentState<WholesaleProduct[]>(`${STORAGE}.products`, MOCK_WHOLESALE_PRODUCTS);
   const [customers, setCustomers] = usePersistentState<WholesaleCustomer[]>(`${STORAGE}.customers`, MOCK_WHOLESALE_CUSTOMERS);
   const [orders, setOrders] = usePersistentState<WholesaleOrder[]>(`${STORAGE}.orders`, MOCK_WHOLESALE_ORDERS);
+  const [suppliers, setSuppliers] = usePersistentState<Supplier[]>(`${STORAGE}.suppliers`, MOCK_SUPPLIERS);
+  const [purchases, setPurchases] = usePersistentState<PurchaseOrder[]>(`${STORAGE}.purchases`, MOCK_PURCHASES);
+  const [movements, setMovements] = usePersistentState<StockMovement[]>(`${STORAGE}.movements`, MOCK_STOCK_MOVEMENTS);
   const [settings, setSettings] = usePersistentState(`${STORAGE}.settings`, DEFAULT_WHOLESALE_SETTINGS);
   const [company, setCompany] = usePersistentState<CompanySettings>(`${STORAGE}.company`, DEFAULT_COMPANY_SETTINGS);
 
@@ -46,6 +61,7 @@ const Wholesale: React.FC = () => {
       });
       setOrders(list => upsert(list, result.order));
       setProducts(result.products);
+      setMovements(list => [...list, ...result.movements]);
       return null;
     } catch (e) {
       return e instanceof Error ? e.message : String(e);

@@ -1,7 +1,8 @@
 
 import {
   Employee, Site, Role, ContractType, SiteStatus, Invoice, InvoiceStatus, CompanySettings,
-  WholesaleProduct, WholesaleCustomer, WholesaleOrder, WholesaleSettings, CustomerSegment, OrderStatus
+  WholesaleProduct, WholesaleCustomer, WholesaleOrder, WholesaleSettings, CustomerSegment, OrderStatus,
+  Supplier, PurchaseOrder, PurchaseStatus, StockMovement, StockMovementType
 } from './types';
 
 export const LYON_CENTER: [number, number] = [45.764043, 4.835659];
@@ -119,62 +120,62 @@ export const MOCK_WHOLESALE_PRODUCTS: WholesaleProduct[] = [
   {
     id: 'prd-1', sku: 'SOL-NEU-5L', name: 'Détergent sols neutre', category: 'Sols', packaging: 'Bidon 5 L',
     costPrice: 9.8, tiers: [{ minQty: 1, unitPrice: 16.9 }, { minQty: 10, unitPrice: 15.5 }, { minQty: 50, unitPrice: 13.9 }],
-    vatRate: 20, stock: 140, minStock: 40, active: true
+    vatRate: 20, stock: 140, minStock: 40, active: true, supplierId: 'sup-1', lastPurchasePrice: 9.8
   },
   {
     id: 'prd-2', sku: 'DEG-SUP-5L', name: 'Dégraissant surpuissant', category: 'Sols', packaging: 'Bidon 5 L',
     costPrice: 12.4, tiers: [{ minQty: 1, unitPrice: 21.5 }, { minQty: 10, unitPrice: 19.7 }, { minQty: 50, unitPrice: 17.9 }],
-    vatRate: 20, stock: 65, minStock: 20, active: true
+    vatRate: 20, stock: 65, minStock: 20, active: true, supplierId: 'sup-1', lastPurchasePrice: 12.4
   },
   {
     id: 'prd-3', sku: 'SAN-DET-12', name: 'Détartrant sanitaires', category: 'Sanitaires', packaging: 'Carton 12 × 750 mL',
     costPrice: 18, tiers: [{ minQty: 1, unitPrice: 32.4 }, { minQty: 10, unitPrice: 29.9 }, { minQty: 30, unitPrice: 27.5 }],
-    vatRate: 20, stock: 22, minStock: 25, active: true
+    vatRate: 20, stock: 22, minStock: 25, active: true, supplierId: 'sup-1', lastPurchasePrice: 18
   },
   {
     id: 'prd-4', sku: 'VIT-NET-5L', name: 'Nettoyant vitres', category: 'Vitres', packaging: 'Bidon 5 L',
     costPrice: 7.9, tiers: [{ minQty: 1, unitPrice: 13.9 }, { minQty: 10, unitPrice: 12.7 }, { minQty: 50, unitPrice: 11.5 }],
-    vatRate: 20, stock: 90, minStock: 30, active: true
+    vatRate: 20, stock: 90, minStock: 30, active: true, supplierId: 'sup-1', lastPurchasePrice: 7.9
   },
   {
     id: 'prd-5', sku: 'DES-SUR-5L', name: 'Désinfectant surfaces EN 14476', category: 'Désinfection', packaging: 'Bidon 5 L',
     costPrice: 15.6, tiers: [{ minQty: 1, unitPrice: 27.9 }, { minQty: 10, unitPrice: 25.5 }, { minQty: 50, unitPrice: 23.4 }],
-    vatRate: 20, stock: 48, minStock: 20, active: true
+    vatRate: 20, stock: 48, minStock: 20, active: true, supplierId: 'sup-1', lastPurchasePrice: 15.6
   },
   {
     id: 'prd-6', sku: 'HYG-GEL-12', name: 'Gel hydroalcoolique', category: 'Hygiène', packaging: 'Carton 12 × 500 mL',
     costPrice: 21, tiers: [{ minQty: 1, unitPrice: 36 }, { minQty: 10, unitPrice: 33 }],
-    vatRate: 20, stock: 30, minStock: 10, active: true
+    vatRate: 20, stock: 30, minStock: 10, active: true, supplierId: 'sup-2', lastPurchasePrice: 21
   },
   {
     id: 'prd-7', sku: 'PAP-ESS-20', name: 'Essuie-mains enchevêtrés', category: 'Consommables', packaging: 'Carton 20 × 150 feuilles',
     costPrice: 19.5, tiers: [{ minQty: 1, unitPrice: 31.9 }, { minQty: 10, unitPrice: 29.5 }, { minQty: 40, unitPrice: 27.4 }],
-    vatRate: 20, stock: 75, minStock: 30, active: true
+    vatRate: 20, stock: 75, minStock: 30, active: true, supplierId: 'sup-2', lastPurchasePrice: 19.5
   },
   {
     id: 'prd-8', sku: 'PAP-WC-JMB', name: 'Papier toilette Jumbo', category: 'Consommables', packaging: 'Colis 6 rouleaux',
     costPrice: 11.2, tiers: [{ minQty: 1, unitPrice: 18.9 }, { minQty: 10, unitPrice: 17.4 }, { minQty: 50, unitPrice: 15.9 }],
-    vatRate: 20, stock: 110, minStock: 40, active: true
+    vatRate: 20, stock: 110, minStock: 40, active: true, supplierId: 'sup-2', lastPurchasePrice: 11.2
   },
   {
     id: 'prd-9', sku: 'SAC-110-200', name: 'Sacs poubelle 110 L renforcés', category: 'Consommables', packaging: 'Carton 200 sacs',
     costPrice: 22, tiers: [{ minQty: 1, unitPrice: 36.5 }, { minQty: 10, unitPrice: 33.9 }],
-    vatRate: 20, stock: 8, minStock: 15, active: true
+    vatRate: 20, stock: 8, minStock: 15, active: true, supplierId: 'sup-2', lastPurchasePrice: 22
   },
   {
     id: 'prd-10', sku: 'MAT-MIC-10', name: 'Microfibres 40 × 40 cm', category: 'Matériel', packaging: 'Lot de 10',
     costPrice: 6.5, tiers: [{ minQty: 1, unitPrice: 12.9 }, { minQty: 20, unitPrice: 11.5 }, { minQty: 100, unitPrice: 9.9 }],
-    vatRate: 20, stock: 200, minStock: 50, active: true
+    vatRate: 20, stock: 200, minStock: 50, active: true, supplierId: 'sup-3', lastPurchasePrice: 6.5
   },
   {
     id: 'prd-11', sku: 'MAT-MOP-40', name: 'Frange MOP coton 40 cm', category: 'Matériel', packaging: 'Lot de 5',
     costPrice: 14, tiers: [{ minQty: 1, unitPrice: 24.9 }, { minQty: 10, unitPrice: 22.5 }],
-    vatRate: 20, stock: 35, minStock: 10, active: true
+    vatRate: 20, stock: 35, minStock: 10, active: true, supplierId: 'sup-3', lastPurchasePrice: 14
   },
   {
     id: 'prd-12', sku: 'HYG-GNT-100', name: 'Gants nitrile non poudrés', category: 'Hygiène', packaging: 'Boîte de 100',
     costPrice: 4.2, tiers: [{ minQty: 1, unitPrice: 7.9 }, { minQty: 20, unitPrice: 6.9 }, { minQty: 100, unitPrice: 5.9 }],
-    vatRate: 20, stock: 320, minStock: 100, active: true
+    vatRate: 20, stock: 320, minStock: 100, active: true, supplierId: 'sup-2', lastPurchasePrice: 4.2
   }
 ];
 
@@ -235,4 +236,76 @@ export const MOCK_WHOLESALE_ORDERS: WholesaleOrder[] = [
     notes: 'Livraison le matin avant 9 h.',
     history: [{ date: '2026-10-21', status: OrderStatus.QUOTE }]
   }
+];
+
+export const MOCK_SUPPLIERS: Supplier[] = [
+  {
+    id: 'sup-1', companyName: 'Rhône Chimie Pro', siret: '555 666 777 00018', tvaIntra: 'FR 55 555666777',
+    address: '14 Rue de l’Industrie, 69800 Saint-Priest', contactName: 'Marc Lefort', email: 'commandes@rhonechimie.example',
+    phone: '04 72 33 44 55', paymentTermsDays: 45, leadTimeDays: 3
+  },
+  {
+    id: 'sup-2', companyName: 'Hygiène Papier Sud', siret: '666 777 888 00029', tvaIntra: 'FR 66 666777888',
+    address: '8 Avenue de la Gare, 38200 Vienne', contactName: 'Julie Perrin', email: 'adv@hygienepapier.example',
+    phone: '04 74 55 66 77', paymentTermsDays: 30, leadTimeDays: 5
+  },
+  {
+    id: 'sup-3', companyName: 'MatClean Équipement', siret: '777 888 999 00030', tvaIntra: 'FR 77 777888999',
+    address: '3 Chemin des Mûriers, 69150 Décines', contactName: 'Paulo Santos', email: 'pro@matclean.example',
+    phone: '04 78 66 77 88', paymentTermsDays: 30, leadTimeDays: 7
+  }
+];
+
+export const MOCK_PURCHASES: PurchaseOrder[] = [
+  {
+    id: 'ach-1', number: 'ACH-2026-0001', supplierId: 'sup-1', supplierName: 'Rhône Chimie Pro',
+    date: '2026-10-09', expectedDate: '2026-10-12', status: PurchaseStatus.RECEIVED,
+    lines: [
+      { productId: 'prd-1', sku: 'SOL-NEU-5L', label: 'Détergent sols neutre — Bidon 5 L', quantity: 60, unitCost: 9.8, vatRate: 20, receivedQty: 60 },
+      { productId: 'prd-5', sku: 'DES-SUR-5L', label: 'Désinfectant surfaces EN 14476 — Bidon 5 L', quantity: 24, unitCost: 15.6, vatRate: 20, receivedQty: 24 }
+    ],
+    shippingHT: 0, receivedDate: '2026-10-12', supplierInvoiceRef: 'RCP-88412', dueDate: '2026-11-26',
+    history: [
+      { date: '2026-10-09', status: PurchaseStatus.DRAFT },
+      { date: '2026-10-09', status: PurchaseStatus.ORDERED },
+      { date: '2026-10-12', status: PurchaseStatus.RECEIVED }
+    ]
+  },
+  {
+    id: 'ach-2', number: 'ACH-2026-0002', supplierId: 'sup-2', supplierName: 'Hygiène Papier Sud',
+    date: '2026-10-20', expectedDate: '2026-10-25', status: PurchaseStatus.ORDERED,
+    lines: [
+      { productId: 'prd-9', sku: 'SAC-110-200', label: 'Sacs poubelle 110 L renforcés — Carton 200 sacs', quantity: 40, unitCost: 22, vatRate: 20, receivedQty: 0 },
+      { productId: 'prd-8', sku: 'PAP-WC-JMB', label: 'Papier toilette Jumbo — Colis 6 rouleaux', quantity: 30, unitCost: 11.2, vatRate: 20, receivedQty: 0 }
+    ],
+    shippingHT: 18,
+    history: [
+      { date: '2026-10-20', status: PurchaseStatus.DRAFT },
+      { date: '2026-10-20', status: PurchaseStatus.ORDERED }
+    ]
+  }
+];
+
+// Historique cohérent avec les commandes et achats de démonstration :
+// stock initial au 1er octobre, puis ventes CMD-0001 et CMD-0002 et réception ACH-0001.
+const INITIAL_STOCK_SHIFT: Record<string, number> = { 'prd-1': -10, 'prd-5': -14, 'prd-7': 12, 'prd-8': 20 };
+
+const demoMovement = (
+  id: string, date: string, productId: string, type: StockMovementType, quantity: number, stockAfter: number, reference?: string
+): StockMovement => {
+  const product = MOCK_WHOLESALE_PRODUCTS.find(p => p.id === productId)!;
+  return { id, date, productId, sku: product.sku, type, quantity, unitCost: product.costPrice, stockAfter, reference };
+};
+
+export const MOCK_STOCK_MOVEMENTS: StockMovement[] = [
+  ...MOCK_WHOLESALE_PRODUCTS.map(p => {
+    const initial = p.stock + (INITIAL_STOCK_SHIFT[p.id] ?? 0);
+    return demoMovement(`mvt-init-${p.id}`, '2026-10-01', p.id, StockMovementType.INITIAL, initial, initial);
+  }),
+  demoMovement('mvt-1', '2026-10-05', 'prd-1', StockMovementType.SALE, -50, 80, 'CMD-2026-0001'),
+  demoMovement('mvt-2', '2026-10-05', 'prd-8', StockMovementType.SALE, -20, 110, 'CMD-2026-0001'),
+  demoMovement('mvt-3', '2026-10-12', 'prd-1', StockMovementType.PURCHASE, 60, 140, 'ACH-2026-0001'),
+  demoMovement('mvt-4', '2026-10-12', 'prd-5', StockMovementType.PURCHASE, 24, 58, 'ACH-2026-0001'),
+  demoMovement('mvt-5', '2026-10-20', 'prd-5', StockMovementType.SALE, -10, 48, 'CMD-2026-0002'),
+  demoMovement('mvt-6', '2026-10-20', 'prd-7', StockMovementType.SALE, -12, 75, 'CMD-2026-0002')
 ];

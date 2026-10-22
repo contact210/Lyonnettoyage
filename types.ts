@@ -108,12 +108,14 @@ export interface WholesaleProduct {
   name: string;
   category: ProductCategory;
   packaging: string;  // unité de vente, ex : "Bidon 5 L"
-  costPrice: number;  // prix d'achat HT
+  costPrice: number;  // coût moyen pondéré (CMP) HT, recalculé à chaque réception
   tiers: PriceTier[]; // le premier palier (minQty 1) est le prix de base
   vatRate: number;
-  stock: number;
+  stock: number;      // disponible à la vente (les commandes confirmées sont déjà déduites)
   minStock: number;
   active: boolean;
+  supplierId?: string;        // fournisseur principal
+  lastPurchasePrice?: number; // dernier prix d'achat HT payé
 }
 
 export enum CustomerSegment {
@@ -183,4 +185,76 @@ export interface WholesaleSettings {
   shippingFee: number;     // frais de livraison HT sous le franco
   minOrderHT: number;      // minimum de commande HT
   minMarginRate: number;   // marge minimale en % du prix de vente
+}
+
+export interface Supplier {
+  id: string;
+  companyName: string;
+  siret: string;
+  tvaIntra: string;
+  address: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  paymentTermsDays: number;
+  leadTimeDays: number; // délai de livraison habituel
+}
+
+export enum PurchaseStatus {
+  DRAFT = 'Brouillon',
+  ORDERED = 'Commandée',
+  PARTIAL = 'Reçue en partie',
+  RECEIVED = 'Reçue',
+  CANCELED = 'Annulée'
+}
+
+export interface PurchaseLine {
+  productId: string;
+  sku: string;
+  label: string;
+  quantity: number;
+  unitCost: number; // prix d'achat HT négocié
+  vatRate: number;
+  receivedQty: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  number: string;
+  supplierId: string;
+  supplierName: string;
+  date: string;
+  expectedDate?: string;
+  status: PurchaseStatus;
+  lines: PurchaseLine[];
+  shippingHT: number; // frais de port facturés par le fournisseur, répartis dans le coût de revient
+  notes?: string;
+  receivedDate?: string;
+  supplierInvoiceRef?: string;
+  dueDate?: string;
+  paidDate?: string;
+  history: { date: string; status: PurchaseStatus }[];
+}
+
+export enum StockMovementType {
+  INITIAL = 'Stock initial',
+  PURCHASE = 'Réception achat',
+  SALE = 'Sortie vente',
+  SALE_CANCEL = 'Retour (vente annulée)',
+  COUNT = 'Inventaire',
+  LOSS = 'Perte / casse',
+  ADJUSTMENT = 'Ajustement'
+}
+
+export interface StockMovement {
+  id: string;
+  date: string;
+  productId: string;
+  sku: string;
+  type: StockMovementType;
+  quantity: number;   // + entrée, − sortie
+  unitCost: number;   // valorisation HT du mouvement
+  stockAfter: number; // stock disponible après le mouvement
+  reference?: string; // n° de commande ou d'achat
+  note?: string;
 }

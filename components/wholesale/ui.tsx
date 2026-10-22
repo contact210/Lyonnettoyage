@@ -78,8 +78,7 @@ export const primaryButton =
 export const secondaryButton =
   'flex items-center justify-center gap-2 bg-white text-gray-600 px-4 py-2 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
 
-export const newId = (prefix: string) =>
-  `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+export { newId } from '../../services/wholesalePricing';
 
 // Lit un nombre saisi au clavier français (« 12,5 » comme « 12.5 »).
 export const parseNumber = (value: string) => {
