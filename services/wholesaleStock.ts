@@ -155,6 +155,25 @@ export const receivePurchase = (
   return { purchase, products, movements };
 };
 
+const assertReceived = (po: PurchaseOrder) => {
+  if (po.status !== PurchaseStatus.RECEIVED && po.status !== PurchaseStatus.PARTIAL) {
+    throw new Error("La facture fournisseur s'enregistre après la réception.");
+  }
+};
+
+export const recordSupplierInvoice = (po: PurchaseOrder, invoice: { ref: string; dueDate: string }) => {
+  assertReceived(po);
+  if (!invoice.ref.trim()) throw new Error('Indiquez le numéro de la facture fournisseur.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(invoice.dueDate)) throw new Error("Indiquez la date d'échéance.");
+  return { ...po, supplierInvoiceRef: invoice.ref.trim(), dueDate: invoice.dueDate };
+};
+
+export const markPurchasePaid = (po: PurchaseOrder, today: string) => {
+  assertReceived(po);
+  if (po.paidDate) throw new Error('Cet achat est déjà payé.');
+  return { ...po, paidDate: today };
+};
+
 export const isPurchaseToPay = (po: PurchaseOrder) =>
   (po.status === PurchaseStatus.RECEIVED || po.status === PurchaseStatus.PARTIAL) && !po.paidDate;
 

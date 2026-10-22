@@ -23,14 +23,22 @@ import {
 } from '../constants';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { applyStatusChange, todayISO } from '../services/wholesalePricing';
+import {
+  cancelPurchase,
+  markPurchaseOrdered,
+  markPurchasePaid,
+  receivePurchase,
+  recordSupplierInvoice
+} from '../services/wholesaleStock';
 import Catalog from './wholesale/Catalog';
 import Customers from './wholesale/Customers';
 import Orders from './wholesale/Orders';
 import Overview from './wholesale/Overview';
+import Purchases from './wholesale/Purchases';
 import Settings, { WholesaleBackup } from './wholesale/Settings';
 import Suppliers from './wholesale/Suppliers';
 
-type SubTab = 'overview' | 'orders' | 'customers' | 'suppliers' | 'catalog' | 'settings';
+type SubTab = 'overview' | 'orders' | 'customers' | 'purchases' | 'suppliers' | 'catalog' | 'settings';
 
 const STORAGE = 'cleanmanager.wholesale.v1';
 
@@ -41,6 +49,7 @@ const upsert = <T extends { id: string }>(list: T[], item: T) =>
 const Wholesale: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('overview');
   const [newOrderFor, setNewOrderFor] = useState<string | null>(null);
+  const [purchaseFocus, setPurchaseFocus] = useState<{ purchaseId?: string; supplierId?: string } | null>(null);
   const [products, setProducts] = usePersistentState<WholesaleProduct[]>(`${STORAGE}.products`, MOCK_WHOLESALE_PRODUCTS);
   const [customers, setCustomers] = usePersistentState<WholesaleCustomer[]>(`${STORAGE}.customers`, MOCK_WHOLESALE_CUSTOMERS);
   const [orders, setOrders] = usePersistentState<WholesaleOrder[]>(`${STORAGE}.orders`, MOCK_WHOLESALE_ORDERS);
@@ -75,6 +84,46 @@ const Wholesale: React.FC = () => {
     return confirm ? changeStatus(order, OrderStatus.CONFIRMED, allOrders) : null;
   };
 
+  // Exécute une action d'achat ; renvoie le message d'erreur éventuel.
+  const attempt = (action: () => void): string | null => {
+    try {
+      action();
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : String(e);
+    }
+  };
+
+  // Le calcul (qui peut échouer) se fait avant la mise à jour de l'état, pour que l'erreur soit attrapée ici.
+  const savePurchase = (compute: () => PurchaseOrder) =>
+    attempt(() => {
+      const updated = compute();
+      setPurchases(list => upsert(list, updated));
+    });
+
+  const purchaseActions = {
+    onSave: (purchase: PurchaseOrder, order: boolean) => {
+      setPurchases(list => upsert(list, purchase)); // le brouillon est gardé même si la commande échoue
+      return order ? savePurchase(() => markPurchaseOrdered(purchase, todayISO())) : null;
+    },
+    onOrder: (purchase: PurchaseOrder) => savePurchase(() => markPurchaseOrdered(purchase, todayISO())),
+    onCancel: (purchase: PurchaseOrder) => savePurchase(() => cancelPurchase(purchase, todayISO())),
+    onReceive: (purchase: PurchaseOrder, received: number[]) =>
+      attempt(() => {
+        const result = receivePurchase(purchase, received, {
+          products,
+          supplier: suppliers.find(s => s.id === purchase.supplierId),
+          today: todayISO()
+        });
+        setPurchases(list => upsert(list, result.purchase));
+        setProducts(result.products);
+        setMovements(list => [...list, ...result.movements]);
+      }),
+    onInvoice: (purchase: PurchaseOrder, invoice: { ref: string; dueDate: string }) =>
+      savePurchase(() => recordSupplierInvoice(purchase, invoice)),
+    onPay: (purchase: PurchaseOrder) => savePurchase(() => markPurchasePaid(purchase, todayISO()))
+  };
+
   const restore = (data: WholesaleBackup) => {
     setProducts(data.products);
     setCustomers(data.customers);
@@ -87,6 +136,7 @@ const Wholesale: React.FC = () => {
     { id: 'overview', label: "Vue d'ensemble" },
     { id: 'orders', label: 'Ventes' },
     { id: 'customers', label: 'Clients' },
+    { id: 'purchases', label: 'Achats' },
     { id: 'suppliers', label: 'Fournisseurs' },
     { id: 'catalog', label: 'Catalogue' },
     { id: 'settings', label: 'Réglages' }
@@ -151,12 +201,28 @@ const Wholesale: React.FC = () => {
         />
       )}
 
+      {activeSubTab === 'purchases' && (
+        <Purchases
+          purchases={purchases}
+          suppliers={suppliers}
+          products={products}
+          company={company}
+          focus={purchaseFocus}
+          onFocused={() => setPurchaseFocus(null)}
+          {...purchaseActions}
+        />
+      )}
+
       {activeSubTab === 'suppliers' && (
         <Suppliers
           suppliers={suppliers}
           purchases={purchases}
           products={products}
           onSave={s => setSuppliers(list => upsert(list, s))}
+          onNewPurchase={supplierId => {
+            setPurchaseFocus({ supplierId });
+            setActiveSubTab('purchases');
+          }}
         />
       )}
 

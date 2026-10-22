@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { OrderStatus, WholesaleProduct } from '../../types';
+import { OrderStatus, PurchaseStatus, WholesaleProduct } from '../../types';
 
 export const inputClass =
   'w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none';
@@ -57,6 +57,20 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
 
 export const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => (
   <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase whitespace-nowrap ${STATUS_COLORS[status]}`}>
+    {status}
+  </span>
+);
+
+export const PURCHASE_STATUS_COLORS: Record<PurchaseStatus, string> = {
+  [PurchaseStatus.DRAFT]: 'bg-gray-100 text-gray-700',
+  [PurchaseStatus.ORDERED]: 'bg-blue-100 text-blue-700',
+  [PurchaseStatus.PARTIAL]: 'bg-amber-100 text-amber-700',
+  [PurchaseStatus.RECEIVED]: 'bg-teal-100 text-teal-700',
+  [PurchaseStatus.CANCELED]: 'bg-red-100 text-red-700'
+};
+
+export const PurchaseBadge: React.FC<{ status: PurchaseStatus }> = ({ status }) => (
+  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase whitespace-nowrap ${PURCHASE_STATUS_COLORS[status]}`}>
     {status}
   </span>
 );

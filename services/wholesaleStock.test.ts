@@ -7,8 +7,10 @@ import {
   incomingQuantities,
   landedUnitCost,
   markPurchaseOrdered,
+  markPurchasePaid,
   profitability,
   receivePurchase,
+  recordSupplierInvoice,
   reorderSuggestions,
   reservedQuantities
 } from './wholesaleStock';
@@ -104,6 +106,17 @@ describe('achats', () => {
   it('refuse d’annuler un achat déjà reçu en partie', () => {
     expect(cancelPurchase(ordered(), today).status).toBe(PurchaseStatus.CANCELED);
     expect(() => cancelPurchase(ordered({ status: PurchaseStatus.PARTIAL }), today)).toThrow('ne peut plus être annulé');
+  });
+
+  it('enregistre la facture fournisseur puis le paiement, seulement après réception', () => {
+    expect(() => recordSupplierInvoice(ordered(), { ref: 'F-1', dueDate: '2026-12-01' })).toThrow('après la réception');
+    const received = ordered({ status: PurchaseStatus.RECEIVED });
+    expect(() => recordSupplierInvoice(received, { ref: ' ', dueDate: '2026-12-01' })).toThrow('numéro');
+    const invoiced = recordSupplierInvoice(received, { ref: ' F-1 ', dueDate: '2026-12-01' });
+    expect(invoiced).toEqual(expect.objectContaining({ supplierInvoiceRef: 'F-1', dueDate: '2026-12-01' }));
+    const paid = markPurchasePaid(invoiced, today);
+    expect(paid.paidDate).toBe(today);
+    expect(() => markPurchasePaid(paid, today)).toThrow('déjà payé');
   });
 
   it('ne passe commande que d’un brouillon valide', () => {
