@@ -258,3 +258,74 @@ export interface StockMovement {
   reference?: string; // n° de commande ou d'achat
   note?: string;
 }
+
+// ---------------------------------------------------------------------------
+// CRM
+// ---------------------------------------------------------------------------
+
+export enum LeadStage {
+  NEW = 'Nouveau',
+  CONTACTED = 'Contacté',
+  MEETING = 'Visite / échantillon',
+  PROPOSAL = 'Devis envoyé',
+  NEGOTIATION = 'Négociation',
+  WON = 'Gagné',
+  LOST = 'Perdu'
+}
+
+export type LeadSource =
+  | 'Site web'
+  | 'Google'
+  | 'Téléphone'
+  | 'Recommandation'
+  | 'Salon'
+  | 'Prospection'
+  | 'Réseaux sociaux'
+  | 'Autre';
+
+export interface Lead {
+  id: string;
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  address: string;
+  segment: CustomerSegment;
+  source: LeadSource;
+  stage: LeadStage;
+  estimatedMonthlyHT: number; // achats mensuels estimés du prospect
+  createdDate: string;
+  stageDate: string;          // entrée dans l'étape actuelle
+  lostReason?: string;
+  customerId?: string;        // client créé à la conversion
+  notes?: string;
+}
+
+export enum ActivityType {
+  CALL = 'Appel',
+  EMAIL = 'E-mail',
+  VISIT = 'Visite',
+  SAMPLE = 'Échantillon',
+  NOTE = 'Note'
+}
+
+export interface Activity {
+  id: string;
+  date: string;
+  type: ActivityType;
+  subject: string;
+  notes?: string;
+  leadId?: string;
+  customerId?: string;
+}
+
+export interface CrmTask {
+  id: string;
+  dueDate: string;
+  title: string;
+  leadId?: string;
+  customerId?: string;
+  done: boolean;
+  doneDate?: string;
+  createdDate: string;
+}

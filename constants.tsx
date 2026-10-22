@@ -2,7 +2,8 @@
 import {
   Employee, Site, Role, ContractType, SiteStatus, Invoice, InvoiceStatus, CompanySettings,
   WholesaleProduct, WholesaleCustomer, WholesaleOrder, WholesaleSettings, CustomerSegment, OrderStatus,
-  Supplier, PurchaseOrder, PurchaseStatus, StockMovement, StockMovementType
+  Supplier, PurchaseOrder, PurchaseStatus, StockMovement, StockMovementType,
+  Lead, LeadStage, Activity, ActivityType, CrmTask
 } from './types';
 
 export const LYON_CENTER: [number, number] = [45.764043, 4.835659];
@@ -308,4 +309,67 @@ export const MOCK_STOCK_MOVEMENTS: StockMovement[] = [
   demoMovement('mvt-4', '2026-10-12', 'prd-5', StockMovementType.PURCHASE, 24, 58, 'ACH-2026-0001'),
   demoMovement('mvt-5', '2026-10-20', 'prd-5', StockMovementType.SALE, -10, 48, 'CMD-2026-0002'),
   demoMovement('mvt-6', '2026-10-20', 'prd-7', StockMovementType.SALE, -12, 75, 'CMD-2026-0002')
+];
+
+// ---------------------------------------------------------------------------
+// CRM — données de démonstration
+// ---------------------------------------------------------------------------
+
+export const MOCK_LEADS: Lead[] = [
+  {
+    id: 'lead-1', companyName: 'Boulangerie Pain Doré', contactName: 'Sandrine Morel', email: 'contact@paindore.example',
+    phone: '04 78 10 20 30', address: '9 Rue Mercière, 69002 Lyon', segment: CustomerSegment.COMPANY, source: 'Google',
+    stage: LeadStage.NEW, estimatedMonthlyHT: 180, createdDate: '2026-10-21', stageDate: '2026-10-21',
+    notes: 'Formulaire du site : cherche sacs, essuie-mains et produit sols.'
+  },
+  {
+    id: 'lead-2', companyName: 'Résidence Seniors Les Acacias', contactName: 'Nadia Haddad', email: 'intendance@acacias.example',
+    phone: '04 72 40 50 60', address: '120 Avenue Berthelot, 69007 Lyon', segment: CustomerSegment.COMPANY, source: 'Recommandation',
+    stage: LeadStage.CONTACTED, estimatedMonthlyHT: 650, createdDate: '2026-10-10', stageDate: '2026-10-14'
+  },
+  {
+    id: 'lead-3', companyName: 'Garage Auto Confluence', contactName: 'Thomas Girard', email: 'atelier@garageconfluence.example',
+    phone: '04 78 37 11 22', address: '45 Quai Perrache, 69002 Lyon', segment: CustomerSegment.COMPANY, source: 'Prospection',
+    stage: LeadStage.MEETING, estimatedMonthlyHT: 240, createdDate: '2026-10-02', stageDate: '2026-10-16'
+  },
+  {
+    id: 'lead-4', companyName: 'Clinique Vétérinaire des Brotteaux', contactName: 'Dr Claire Fabre', email: 'accueil@vet-brotteaux.example',
+    phone: '04 78 24 33 44', address: '61 Boulevard des Brotteaux, 69006 Lyon', segment: CustomerSegment.COMPANY, source: 'Site web',
+    stage: LeadStage.PROPOSAL, estimatedMonthlyHT: 420, createdDate: '2026-09-25', stageDate: '2026-10-15'
+  },
+  {
+    id: 'lead-5', companyName: 'Restaurant Le Bouchon Gourmand', contactName: 'Julien Bertrand', email: 'julien@bouchongourmand.example',
+    phone: '04 78 42 55 66', address: '14 Rue Saint-Jean, 69005 Lyon', segment: CustomerSegment.COMPANY, source: 'Salon',
+    stage: LeadStage.NEGOTIATION, estimatedMonthlyHT: 310, createdDate: '2026-09-20', stageDate: '2026-10-18',
+    notes: 'Demande 8 % de remise sur volume.'
+  },
+  {
+    id: 'lead-6', companyName: 'Salle de sport FitLyon', contactName: 'Kevin Lambert', email: 'gerant@fitlyon.example',
+    phone: '04 78 60 70 80', address: '7 Rue de la Part-Dieu, 69003 Lyon', segment: CustomerSegment.COMPANY, source: 'Réseaux sociaux',
+    stage: LeadStage.LOST, estimatedMonthlyHT: 200, createdDate: '2026-09-10', stageDate: '2026-10-01',
+    lostReason: 'Prix trop élevé face à un grossiste en ligne'
+  },
+  {
+    id: 'lead-7', companyName: 'Hôtel Les Platanes', contactName: 'Karim Benali', email: 'intendance@hotel-platanes.example',
+    phone: '04 78 11 22 33', address: '5 Quai Claude Bernard, 69007 Lyon', segment: CustomerSegment.COMPANY, source: 'Recommandation',
+    stage: LeadStage.WON, estimatedMonthlyHT: 550, createdDate: '2026-09-15', stageDate: '2026-10-01', customerId: 'cli-2'
+  }
+];
+
+export const MOCK_ACTIVITIES: Activity[] = [
+  { id: 'act-1', date: '2026-10-14', type: ActivityType.CALL, subject: 'Premier appel : 3 bâtiments, achats centralisés par l’intendance', leadId: 'lead-2' },
+  { id: 'act-2', date: '2026-10-15', type: ActivityType.EMAIL, subject: 'Devis sanitaires + désinfection envoyé', leadId: 'lead-4' },
+  { id: 'act-3', date: '2026-10-16', type: ActivityType.SAMPLE, subject: 'Échantillons dégraissant et microfibres déposés à l’atelier', leadId: 'lead-3' },
+  { id: 'act-4', date: '2026-10-18', type: ActivityType.VISIT, subject: 'Rencontre avec le chef : demande −8 % sur volume', notes: 'Commande prévue tous les 15 jours si accord.', leadId: 'lead-5' },
+  { id: 'act-5', date: '2026-10-19', type: ActivityType.EMAIL, subject: 'Confirmation de la commande CMD-2026-0002', customerId: 'cli-2' },
+  { id: 'act-6', date: '2026-10-20', type: ActivityType.CALL, subject: 'Point mensuel : prochaine commande fin octobre', customerId: 'cli-1' }
+];
+
+export const MOCK_CRM_TASKS: CrmTask[] = [
+  { id: 'task-1', dueDate: '2026-10-14', title: 'Appeler la résidence', leadId: 'lead-2', done: true, doneDate: '2026-10-14', createdDate: '2026-10-10' },
+  { id: 'task-2', dueDate: '2026-10-21', title: 'Relancer le devis envoyé le 15/10', leadId: 'lead-4', done: false, createdDate: '2026-10-15' },
+  { id: 'task-3', dueDate: '2026-10-22', title: 'Rappeler pour le retour sur les échantillons', leadId: 'lead-3', done: false, createdDate: '2026-10-16' },
+  { id: 'task-4', dueDate: '2026-10-23', title: 'Premier appel et prise de rendez-vous', leadId: 'lead-1', done: false, createdDate: '2026-10-21' },
+  { id: 'task-5', dueDate: '2026-10-24', title: 'Envoyer une proposition à −6 % avec livraison offerte', leadId: 'lead-5', done: false, createdDate: '2026-10-18' },
+  { id: 'task-6', dueDate: '2026-10-27', title: 'Relancer le devis gel + gants', customerId: 'cli-3', done: false, createdDate: '2026-10-21' }
 ];

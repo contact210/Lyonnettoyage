@@ -2,7 +2,10 @@
 import React, { useState } from 'react';
 import { Boxes } from 'lucide-react';
 import {
+  Activity,
   CompanySettings,
+  CrmTask,
+  Lead,
   OrderStatus,
   PurchaseOrder,
   StockMovement,
@@ -15,6 +18,9 @@ import {
 import {
   DEFAULT_COMPANY_SETTINGS,
   DEFAULT_WHOLESALE_SETTINGS,
+  MOCK_ACTIVITIES,
+  MOCK_CRM_TASKS,
+  MOCK_LEADS,
   MOCK_PURCHASES,
   MOCK_STOCK_MOVEMENTS,
   MOCK_SUPPLIERS,
@@ -63,6 +69,9 @@ const Wholesale: React.FC = () => {
   const [suppliers, setSuppliers] = usePersistentState<Supplier[]>(`${STORAGE}.suppliers`, MOCK_SUPPLIERS);
   const [purchases, setPurchases] = usePersistentState<PurchaseOrder[]>(`${STORAGE}.purchases`, MOCK_PURCHASES);
   const [movements, setMovements] = usePersistentState<StockMovement[]>(`${STORAGE}.movements`, MOCK_STOCK_MOVEMENTS);
+  const [leads, setLeads] = usePersistentState<Lead[]>(`${STORAGE}.leads`, MOCK_LEADS);
+  const [activities, setActivities] = usePersistentState<Activity[]>(`${STORAGE}.activities`, MOCK_ACTIVITIES);
+  const [crmTasks, setCrmTasks] = usePersistentState<CrmTask[]>(`${STORAGE}.crmTasks`, MOCK_CRM_TASKS);
   const [settings, setSettings] = usePersistentState(`${STORAGE}.settings`, DEFAULT_WHOLESALE_SETTINGS);
   const [company, setCompany] = usePersistentState<CompanySettings>(`${STORAGE}.company`, DEFAULT_COMPANY_SETTINGS);
 
