@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Search, ChevronLeft, ChevronRight, Phone, Mail, Clock, AlertTriangle, UserCheck, Ban, RotateCcw, Pencil, ShoppingCart } from 'lucide-react';
 import { Activity, CrmTask, CustomerSegment, Lead, LeadSource, LeadStage } from '../../types';
 import { formatDate, formatEUR, todayISO } from '../../services/wholesalePricing';
@@ -53,6 +53,8 @@ interface PipelineProps extends CrmActions {
   leads: Lead[];
   activities: Activity[];
   tasks: CrmTask[];
+  focusLeadId?: string | null;
+  onFocused?: () => void;
 }
 
 const CrmPipeline: React.FC<PipelineProps> = props => {
@@ -63,6 +65,14 @@ const CrmPipeline: React.FC<PipelineProps> = props => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const today = todayISO();
+
+  // Ouverture directe d'un prospect depuis « À faire ».
+  useEffect(() => {
+    if (props.focusLeadId) {
+      setOpenId(props.focusLeadId);
+      props.onFocused?.();
+    }
+  }, [props.focusLeadId]);
 
   const q = query.trim().toLowerCase();
   const visible = leads.filter(l => !q || l.companyName.toLowerCase().includes(q) || l.contactName.toLowerCase().includes(q));

@@ -140,8 +140,10 @@ describe('suivi des clients', () => {
   });
 
   it('relance les devis sans réponse à J+3 puis J+7', () => {
-    expect(quotesToChase(MOCK_WHOLESALE_ORDERS, today)).toEqual([]);
-    expect(quotesToChase(MOCK_WHOLESALE_ORDERS, '2026-10-24')[0]).toEqual(expect.objectContaining({ age: 3, level: 'J+3' }));
-    expect(quotesToChase(MOCK_WHOLESALE_ORDERS, '2026-10-28')[0].level).toBe('J+7');
+    // Devis CMD-2026-0003 du 17/10
+    expect(quotesToChase(MOCK_WHOLESALE_ORDERS, '2026-10-19')).toEqual([]);
+    expect(quotesToChase(MOCK_WHOLESALE_ORDERS, '2026-10-20')[0]).toEqual(expect.objectContaining({ age: 3, level: 'J+3' }));
+    expect(quotesToChase(MOCK_WHOLESALE_ORDERS, today)[0]).toEqual(expect.objectContaining({ age: 5, level: 'J+3' }));
+    expect(quotesToChase(MOCK_WHOLESALE_ORDERS, '2026-10-24')[0].level).toBe('J+7');
   });
 });

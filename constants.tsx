@@ -229,13 +229,13 @@ export const MOCK_WHOLESALE_ORDERS: WholesaleOrder[] = [
   },
   {
     id: 'ord-3', number: 'CMD-2026-0003', customerId: 'cli-3', customerName: 'Crèche Les Petits Pas',
-    date: '2026-10-21', status: OrderStatus.QUOTE,
+    date: '2026-10-17', status: OrderStatus.QUOTE,
     lines: [
       { productId: 'prd-6', sku: 'HYG-GEL-12', label: 'Gel hydroalcoolique — Carton 12 × 500 mL', quantity: 4, unitPrice: 36, unitCost: 21, vatRate: 20 },
       { productId: 'prd-12', sku: 'HYG-GNT-100', label: 'Gants nitrile non poudrés — Boîte de 100', quantity: 20, unitPrice: 6.9, unitCost: 4.2, vatRate: 20 }
     ],
     notes: 'Livraison le matin avant 9 h.',
-    history: [{ date: '2026-10-21', status: OrderStatus.QUOTE }]
+    history: [{ date: '2026-10-17', status: OrderStatus.QUOTE }]
   }
 ];
 
@@ -371,5 +371,5 @@ export const MOCK_CRM_TASKS: CrmTask[] = [
   { id: 'task-3', dueDate: '2026-10-22', title: 'Rappeler pour le retour sur les échantillons', leadId: 'lead-3', done: false, createdDate: '2026-10-16' },
   { id: 'task-4', dueDate: '2026-10-23', title: 'Premier appel et prise de rendez-vous', leadId: 'lead-1', done: false, createdDate: '2026-10-21' },
   { id: 'task-5', dueDate: '2026-10-24', title: 'Envoyer une proposition à −6 % avec livraison offerte', leadId: 'lead-5', done: false, createdDate: '2026-10-18' },
-  { id: 'task-6', dueDate: '2026-10-27', title: 'Relancer le devis gel + gants', customerId: 'cli-3', done: false, createdDate: '2026-10-21' }
+  { id: 'task-6', dueDate: '2026-10-24', title: 'Relancer le devis CMD-2026-0003', customerId: 'cli-3', done: false, createdDate: '2026-10-17' }
 ];

@@ -283,7 +283,18 @@ const Wholesale: React.FC = () => {
         <Overview orders={orders} products={products} purchases={purchases} settings={settings} onGoTo={setActiveSubTab} />
       )}
 
-      {activeSubTab === 'crm' && <Crm leads={leads} activities={activities} tasks={crmTasks} {...crmActions} />}
+      {activeSubTab === 'crm' && (
+        <Crm
+          leads={leads}
+          activities={activities}
+          tasks={crmTasks}
+          customers={customers}
+          orders={orders}
+          settings={settings}
+          company={company}
+          {...crmActions}
+        />
+      )}
 
       {activeSubTab === 'orders' && (
         <Orders
