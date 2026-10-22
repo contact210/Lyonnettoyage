@@ -2,7 +2,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Save, Download, Upload, RotateCcw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
+  Activity,
   CompanySettings,
+  CrmTask,
+  Lead,
   PurchaseOrder,
   StockMovement,
   Supplier,
@@ -21,6 +24,9 @@ export interface WholesaleBackup {
   suppliers: Supplier[];
   purchases: PurchaseOrder[];
   movements: StockMovement[];
+  leads: Lead[];
+  activities: Activity[];
+  crmTasks: CrmTask[];
   settings: WholesaleSettings;
   company: CompanySettings;
 }
@@ -54,12 +60,16 @@ const isBackup = (data: any) =>
   typeof data.settings === 'object' &&
   typeof data.company === 'object';
 
-// Les sauvegardes faites avant l'ajout des achats n'ont pas ces listes.
+// Les sauvegardes plus anciennes n'ont pas les achats ni le CRM.
+const list = (value: unknown) => (Array.isArray(value) ? value : []);
 const withDefaults = (data: any): WholesaleBackup => ({
   ...data,
-  suppliers: Array.isArray(data.suppliers) ? data.suppliers : [],
-  purchases: Array.isArray(data.purchases) ? data.purchases : [],
-  movements: Array.isArray(data.movements) ? data.movements : []
+  suppliers: list(data.suppliers),
+  purchases: list(data.purchases),
+  movements: list(data.movements),
+  leads: list(data.leads),
+  activities: list(data.activities),
+  crmTasks: list(data.crmTasks)
 });
 
 const Settings: React.FC<SettingsProps> = ({ settings, company, backup, onSaveSettings, onSaveCompany, onRestore, onReset }) => {
@@ -128,7 +138,7 @@ const Settings: React.FC<SettingsProps> = ({ settings, company, backup, onSaveSe
       onRestore(backup);
       setMessage({
         ok: true,
-        text: `Sauvegarde restaurée : ${backup.products.length} produits, ${backup.customers.length} clients, ${backup.orders.length} ventes, ${backup.suppliers.length} fournisseurs, ${backup.purchases.length} achats.`
+        text: `Sauvegarde restaurée : ${backup.products.length} produits, ${backup.customers.length} clients, ${backup.orders.length} ventes, ${backup.suppliers.length} fournisseurs, ${backup.purchases.length} achats, ${backup.leads.length} prospects.`
       });
     } catch {
       setMessage({ ok: false, text: "Ce fichier n'est pas une sauvegarde de la vente en gros." });

@@ -238,6 +238,9 @@ const Wholesale: React.FC = () => {
     setSuppliers(data.suppliers);
     setPurchases(data.purchases);
     setMovements(data.movements);
+    setLeads(data.leads);
+    setActivities(data.activities);
+    setCrmTasks(data.crmTasks);
     setSettings(data.settings);
     setCompany(data.company);
   };
@@ -280,7 +283,16 @@ const Wholesale: React.FC = () => {
       </div>
 
       {activeSubTab === 'overview' && (
-        <Overview orders={orders} products={products} purchases={purchases} settings={settings} onGoTo={setActiveSubTab} />
+        <Overview
+          orders={orders}
+          products={products}
+          purchases={purchases}
+          customers={customers}
+          leads={leads}
+          tasks={crmTasks}
+          settings={settings}
+          onGoTo={setActiveSubTab}
+        />
       )}
 
       {activeSubTab === 'crm' && (
@@ -372,7 +384,7 @@ const Wholesale: React.FC = () => {
         <Settings
           settings={settings}
           company={company}
-          backup={{ products, customers, orders, suppliers, purchases, movements, settings, company }}
+          backup={{ products, customers, orders, suppliers, purchases, movements, leads, activities, crmTasks, settings, company }}
           onSaveSettings={setSettings}
           onSaveCompany={setCompany}
           onRestore={restore}
@@ -384,6 +396,9 @@ const Wholesale: React.FC = () => {
               suppliers: MOCK_SUPPLIERS,
               purchases: MOCK_PURCHASES,
               movements: MOCK_STOCK_MOVEMENTS,
+              leads: MOCK_LEADS,
+              activities: MOCK_ACTIVITIES,
+              crmTasks: MOCK_CRM_TASKS,
               settings: DEFAULT_WHOLESALE_SETTINGS,
               company: DEFAULT_COMPANY_SETTINGS
             })

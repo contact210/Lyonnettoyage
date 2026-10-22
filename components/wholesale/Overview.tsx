@@ -1,17 +1,21 @@
 
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Wallet, Truck, FileText, AlertTriangle, Package, Clock, Warehouse, Receipt } from 'lucide-react';
-import { OrderStatus, PurchaseOrder, WholesaleOrder, WholesaleProduct, WholesaleSettings } from '../../types';
+import { TrendingUp, Wallet, Truck, FileText, AlertTriangle, Package, Clock, Warehouse, Receipt, Target, ArrowRight } from 'lucide-react';
+import { CrmTask, Lead, OrderStatus, PurchaseOrder, WholesaleCustomer, WholesaleOrder, WholesaleProduct, WholesaleSettings } from '../../types';
 import { computeTotals, formatDate, formatEUR, isOverdue, lineTotalHT, todayISO } from '../../services/wholesalePricing';
 import { computePurchaseTotals, isPurchaseToPay, reorderSuggestions, reservedQuantities } from '../../services/wholesaleStock';
+import { OPEN_STAGES, customersToReactivate, quotesToChase, taskBuckets, weightedPipeline } from '../../services/wholesaleCrm';
 
 interface OverviewProps {
   orders: WholesaleOrder[];
   products: WholesaleProduct[];
   purchases: PurchaseOrder[];
+  customers: WholesaleCustomer[];
+  leads: Lead[];
+  tasks: CrmTask[];
   settings: WholesaleSettings;
-  onGoTo: (tab: 'orders' | 'purchases' | 'stock') => void;
+  onGoTo: (tab: 'crm' | 'orders' | 'purchases' | 'stock') => void;
 }
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -19,7 +23,7 @@ const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'aoû
 const daysBetween = (from: string, to: string) =>
   Math.round((new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()) / 86400000);
 
-const Overview: React.FC<OverviewProps> = ({ orders, products, purchases, settings, onGoTo }) => {
+const Overview: React.FC<OverviewProps> = ({ orders, products, purchases, customers, leads, tasks, settings, onGoTo }) => {
   const today = todayISO();
   const month = today.slice(0, 7);
 
@@ -107,6 +111,15 @@ const Overview: React.FC<OverviewProps> = ({ orders, products, purchases, settin
         ))}
       </div>
 
+      <CrmBand
+        tasks={tasks}
+        leads={leads}
+        quotes={quotesToChase(orders, today).length}
+        dormant={customersToReactivate(customers, orders, settings, today).length}
+        today={today}
+        onOpen={() => onGoTo('crm')}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold mb-6">Chiffre d'affaires facturé (HT)</h3>
@@ -192,6 +205,48 @@ const Overview: React.FC<OverviewProps> = ({ orders, products, purchases, settin
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+// Résumé commercial du jour, qui renvoie vers le CRM.
+const CrmBand: React.FC<{ tasks: CrmTask[]; leads: Lead[]; quotes: number; dormant: number; today: string; onOpen: () => void }> = ({
+  tasks,
+  leads,
+  quotes,
+  dormant,
+  today,
+  onOpen
+}) => {
+  const buckets = taskBuckets(tasks, today);
+  const open = leads.filter(l => OPEN_STAGES.includes(l.stage));
+  const items = [
+    { label: 'Actions du jour', value: `${buckets.today.length + buckets.overdue.length}`, sub: buckets.overdue.length ? `dont ${buckets.overdue.length} en retard` : 'à jour', warn: buckets.overdue.length > 0 },
+    { label: 'Prospects en cours', value: String(open.length), sub: `${formatEUR(weightedPipeline(leads))} / mois pondérés` },
+    { label: 'Devis à relancer', value: String(quotes), sub: 'sans réponse depuis 3 jours ou plus', warn: quotes > 0 },
+    { label: 'Clients à relancer', value: String(dormant), sub: 'commandent moins que d’habitude', warn: dormant > 0 }
+  ];
+  return (
+    <div className="bg-indigo-900 text-white rounded-xl p-5 flex flex-col lg:flex-row lg:items-center gap-5">
+      <div className="flex items-center gap-3 lg:w-48 shrink-0">
+        <div className="bg-indigo-800 p-2 rounded-lg"><Target size={20} className="text-indigo-200" /></div>
+        <div>
+          <p className="font-bold">Commercial</p>
+          <p className="text-xs text-indigo-300">Aujourd'hui</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
+        {items.map(i => (
+          <div key={i.label}>
+            <p className="text-[11px] uppercase tracking-wider text-indigo-300 font-bold">{i.label}</p>
+            <p className={`text-2xl font-black ${i.warn ? 'text-amber-300' : ''}`}>{i.value}</p>
+            <p className="text-[11px] text-indigo-200">{i.sub}</p>
+          </div>
+        ))}
+      </div>
+      <button onClick={onOpen} className="bg-white text-indigo-900 font-bold text-sm px-4 py-2 rounded-lg hover:bg-indigo-50 flex items-center gap-2 justify-center">
+        Ouvrir le CRM <ArrowRight size={16} />
+      </button>
     </div>
   );
 };
