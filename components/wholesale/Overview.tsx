@@ -1,16 +1,17 @@
 
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Wallet, Truck, FileText, AlertTriangle, Package, Clock } from 'lucide-react';
-import { OrderStatus, WholesaleOrder, WholesaleProduct, WholesaleSettings } from '../../types';
+import { TrendingUp, Wallet, Truck, FileText, AlertTriangle, Package, Clock, Warehouse, Receipt } from 'lucide-react';
+import { OrderStatus, PurchaseOrder, WholesaleOrder, WholesaleProduct, WholesaleSettings } from '../../types';
 import { computeTotals, formatDate, formatEUR, isOverdue, lineTotalHT, todayISO } from '../../services/wholesalePricing';
-import { stockLevel } from './ui';
+import { computePurchaseTotals, isPurchaseToPay, reorderSuggestions, reservedQuantities } from '../../services/wholesaleStock';
 
 interface OverviewProps {
   orders: WholesaleOrder[];
   products: WholesaleProduct[];
+  purchases: PurchaseOrder[];
   settings: WholesaleSettings;
-  onGoTo: (tab: 'orders' | 'catalog') => void;
+  onGoTo: (tab: 'orders' | 'purchases' | 'stock') => void;
 }
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -18,7 +19,7 @@ const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'aoû
 const daysBetween = (from: string, to: string) =>
   Math.round((new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()) / 86400000);
 
-const Overview: React.FC<OverviewProps> = ({ orders, products, settings, onGoTo }) => {
+const Overview: React.FC<OverviewProps> = ({ orders, products, purchases, settings, onGoTo }) => {
   const today = todayISO();
   const month = today.slice(0, 7);
 
@@ -62,29 +63,39 @@ const Overview: React.FC<OverviewProps> = ({ orders, products, settings, onGoTo 
       );
     const top = [...sold.values()].sort((a, b) => b.ht - a.ht).slice(0, 5);
 
-    const restock = products
-      .filter(p => p.active && stockLevel(p) !== 'ok')
-      .map(p => ({ product: p, suggested: Math.max(p.minStock * 2 - p.stock, 1) }));
+    // Réappro en tenant compte des achats déjà en route.
+    const restock = [...reorderSuggestions(products, purchases).values()].flat();
 
-    return { revenueHT, marginHT, goodsHT, toCollect, overdue, open, quotes, chart, top, restock };
-  }, [orders, products, settings, today, month]);
+    const reserved = reservedQuantities(orders);
+    const stockValue = products
+      .filter(p => p.active)
+      .reduce((s, p) => s + (p.stock + (reserved.get(p.id) ?? 0)) * p.costPrice, 0);
+    const toPay = purchases.filter(isPurchaseToPay).map(p => ({ purchase: p, ttc: computePurchaseTotals(p).totalTTC }));
+    const toPayLate = toPay.filter(x => x.purchase.dueDate && x.purchase.dueDate < today);
+
+    return { revenueHT, marginHT, goodsHT, toCollect, overdue, open, quotes, chart, top, restock, stockValue, toPay, toPayLate };
+  }, [orders, products, purchases, settings, today, month]);
 
   const sum = (list: { totals: { totalTTC: number } }[]) => list.reduce((s, x) => s + x.totals.totalTTC, 0);
   const marginRate = data.goodsHT > 0 ? (data.marginHT / data.goodsHT) * 100 : 0;
   const monthLabel = new Date(`${today}T00:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
+  const sumTTC = (list: { ttc: number }[]) => list.reduce((s, x) => s + x.ttc, 0);
+
   const kpis = [
     { label: `CA facturé · ${monthLabel}`, value: `${formatEUR(data.revenueHT)} HT`, sub: `Marge ${formatEUR(data.marginHT)} · ${marginRate.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', warn: data.goodsHT > 0 && marginRate < settings.minMarginRate },
     { label: 'À encaisser', value: `${formatEUR(sum(data.toCollect))} TTC`, sub: data.overdue.length ? `dont ${formatEUR(sum(data.overdue))} en retard` : `${data.toCollect.length} facture(s), aucune en retard`, icon: Wallet, color: 'text-amber-600', bg: 'bg-amber-50', warn: data.overdue.length > 0 },
     { label: 'Commandes en cours', value: String(data.open.length), sub: `${formatEUR(sum(data.open))} TTC à livrer ou facturer`, icon: Truck, color: 'text-blue-600', bg: 'bg-blue-50', warn: false },
-    { label: 'Devis en attente', value: String(data.quotes.length), sub: `${formatEUR(sum(data.quotes))} TTC à transformer`, icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50', warn: false }
+    { label: 'Devis en attente', value: String(data.quotes.length), sub: `${formatEUR(sum(data.quotes))} TTC à transformer`, icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50', warn: false },
+    { label: 'Valeur du stock', value: formatEUR(data.stockValue), sub: `${data.restock.length} produit(s) à réapprovisionner`, icon: Warehouse, color: 'text-indigo-600', bg: 'bg-indigo-50', warn: false, tab: 'stock' as const },
+    { label: 'À payer aux fournisseurs', value: `${formatEUR(sumTTC(data.toPay))} TTC`, sub: data.toPayLate.length ? `dont ${formatEUR(sumTTC(data.toPayLate))} échus` : `${data.toPay.length} facture(s) fournisseur`, icon: Receipt, color: 'text-teal-600', bg: 'bg-teal-50', warn: data.toPayLate.length > 0, tab: 'purchases' as const }
   ];
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {kpis.map(k => (
-          <button key={k.label} onClick={() => onGoTo('orders')} className="text-left bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-indigo-200 transition-colors">
+          <button key={k.label} onClick={() => onGoTo('tab' in k ? k.tab : 'orders')} className="text-left bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-indigo-200 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <div className={`${k.bg} p-2 rounded-lg`}><k.icon className={k.color} size={22} /></div>
               {k.warn && <AlertTriangle className="text-red-500" size={18} />}
@@ -161,20 +172,20 @@ const Overview: React.FC<OverviewProps> = ({ orders, products, settings, onGoTo 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Stock à réapprovisionner</h3>
-            <button onClick={() => onGoTo('catalog')} className="text-xs font-bold text-indigo-600 hover:text-indigo-800">Voir le catalogue</button>
+            <button onClick={() => onGoTo('stock')} className="text-xs font-bold text-indigo-600 hover:text-indigo-800">Voir le stock</button>
           </div>
           {data.restock.length === 0 ? (
-            <p className="text-sm text-gray-400">Tous les produits sont au-dessus de leur seuil.</p>
+            <p className="text-sm text-gray-400">Rien à commander : stock et achats en cours couvrent les seuils.</p>
           ) : (
             <div className="space-y-2">
-              {data.restock.map(({ product, suggested }) => (
+              {data.restock.map(({ product, quantity, incoming }) => (
                 <div key={product.id} className="flex items-center gap-3 p-3 rounded-lg bg-amber-50">
                   <Package className="text-amber-600 shrink-0" size={16} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{product.name} — {product.packaging}</p>
-                    <p className="text-xs text-amber-700">Stock {product.stock} · seuil {product.minStock}</p>
+                    <p className="text-xs text-amber-700">Stock {product.stock}{incoming ? ` + ${incoming} en commande` : ''} · seuil {product.minStock}</p>
                   </div>
-                  <span className="text-xs font-bold text-amber-800 whitespace-nowrap">Commander ~{suggested}</span>
+                  <span className="text-xs font-bold text-amber-800 whitespace-nowrap">Commander ~{quantity}</span>
                 </div>
               ))}
             </div>

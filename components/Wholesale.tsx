@@ -39,12 +39,13 @@ import Catalog from './wholesale/Catalog';
 import Customers from './wholesale/Customers';
 import Orders from './wholesale/Orders';
 import Overview from './wholesale/Overview';
+import Profitability from './wholesale/Profitability';
 import Purchases from './wholesale/Purchases';
 import Settings, { WholesaleBackup } from './wholesale/Settings';
 import Stock from './wholesale/Stock';
 import Suppliers from './wholesale/Suppliers';
 
-type SubTab = 'overview' | 'orders' | 'customers' | 'purchases' | 'suppliers' | 'stock' | 'catalog' | 'settings';
+type SubTab = 'overview' | 'orders' | 'customers' | 'purchases' | 'suppliers' | 'stock' | 'catalog' | 'profitability' | 'settings';
 
 const STORAGE = 'cleanmanager.wholesale.v1';
 
@@ -173,6 +174,9 @@ const Wholesale: React.FC = () => {
     setProducts(data.products);
     setCustomers(data.customers);
     setOrders(data.orders);
+    setSuppliers(data.suppliers);
+    setPurchases(data.purchases);
+    setMovements(data.movements);
     setSettings(data.settings);
     setCompany(data.company);
   };
@@ -185,6 +189,7 @@ const Wholesale: React.FC = () => {
     { id: 'suppliers', label: 'Fournisseurs' },
     { id: 'stock', label: 'Stock' },
     { id: 'catalog', label: 'Catalogue' },
+    { id: 'profitability', label: 'Rentabilité' },
     { id: 'settings', label: 'Réglages' }
   ];
 
@@ -213,7 +218,7 @@ const Wholesale: React.FC = () => {
       </div>
 
       {activeSubTab === 'overview' && (
-        <Overview orders={orders} products={products} settings={settings} onGoTo={setActiveSubTab} />
+        <Overview orders={orders} products={products} purchases={purchases} settings={settings} onGoTo={setActiveSubTab} />
       )}
 
       {activeSubTab === 'orders' && (
@@ -284,11 +289,13 @@ const Wholesale: React.FC = () => {
         />
       )}
 
+      {activeSubTab === 'profitability' && <Profitability orders={orders} movements={movements} settings={settings} />}
+
       {activeSubTab === 'settings' && (
         <Settings
           settings={settings}
           company={company}
-          backup={{ products, customers, orders, settings, company }}
+          backup={{ products, customers, orders, suppliers, purchases, movements, settings, company }}
           onSaveSettings={setSettings}
           onSaveCompany={setCompany}
           onRestore={restore}
@@ -297,6 +304,9 @@ const Wholesale: React.FC = () => {
               products: MOCK_WHOLESALE_PRODUCTS,
               customers: MOCK_WHOLESALE_CUSTOMERS,
               orders: MOCK_WHOLESALE_ORDERS,
+              suppliers: MOCK_SUPPLIERS,
+              purchases: MOCK_PURCHASES,
+              movements: MOCK_STOCK_MOVEMENTS,
               settings: DEFAULT_WHOLESALE_SETTINGS,
               company: DEFAULT_COMPANY_SETTINGS
             })

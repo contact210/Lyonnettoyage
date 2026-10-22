@@ -1,7 +1,16 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Save, Download, Upload, RotateCcw, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { CompanySettings, WholesaleCustomer, WholesaleOrder, WholesaleProduct, WholesaleSettings } from '../../types';
+import {
+  CompanySettings,
+  PurchaseOrder,
+  StockMovement,
+  Supplier,
+  WholesaleCustomer,
+  WholesaleOrder,
+  WholesaleProduct,
+  WholesaleSettings
+} from '../../types';
 import { todayISO } from '../../services/wholesalePricing';
 import { Field, inputClass, parseNumber, primaryButton, secondaryButton } from './ui';
 
@@ -9,6 +18,9 @@ export interface WholesaleBackup {
   products: WholesaleProduct[];
   customers: WholesaleCustomer[];
   orders: WholesaleOrder[];
+  suppliers: Supplier[];
+  purchases: PurchaseOrder[];
+  movements: StockMovement[];
   settings: WholesaleSettings;
   company: CompanySettings;
 }
@@ -34,13 +46,21 @@ const COMPANY_FIELDS: { key: keyof CompanySettings; label: string; wide?: boolea
   { key: 'bic', label: 'BIC' }
 ];
 
-const isBackup = (data: any): data is WholesaleBackup =>
+const isBackup = (data: any) =>
   data &&
   Array.isArray(data.products) &&
   Array.isArray(data.customers) &&
   Array.isArray(data.orders) &&
   typeof data.settings === 'object' &&
   typeof data.company === 'object';
+
+// Les sauvegardes faites avant l'ajout des achats n'ont pas ces listes.
+const withDefaults = (data: any): WholesaleBackup => ({
+  ...data,
+  suppliers: Array.isArray(data.suppliers) ? data.suppliers : [],
+  purchases: Array.isArray(data.purchases) ? data.purchases : [],
+  movements: Array.isArray(data.movements) ? data.movements : []
+});
 
 const Settings: React.FC<SettingsProps> = ({ settings, company, backup, onSaveSettings, onSaveCompany, onRestore, onReset }) => {
   const [terms, setTerms] = useState({
@@ -104,8 +124,12 @@ const Settings: React.FC<SettingsProps> = ({ settings, company, backup, onSaveSe
       const data = JSON.parse(await file.text());
       if (!isBackup(data)) throw new Error('format');
       if (!window.confirm('Remplacer toutes les données de la vente en gros par cette sauvegarde ?')) return;
-      onRestore(data);
-      setMessage({ ok: true, text: `Sauvegarde restaurée : ${data.products.length} produits, ${data.customers.length} clients, ${data.orders.length} commandes.` });
+      const backup = withDefaults(data);
+      onRestore(backup);
+      setMessage({
+        ok: true,
+        text: `Sauvegarde restaurée : ${backup.products.length} produits, ${backup.customers.length} clients, ${backup.orders.length} ventes, ${backup.suppliers.length} fournisseurs, ${backup.purchases.length} achats.`
+      });
     } catch {
       setMessage({ ok: false, text: "Ce fichier n'est pas une sauvegarde de la vente en gros." });
     } finally {
