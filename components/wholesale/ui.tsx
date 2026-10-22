@@ -27,10 +27,11 @@ export const Modal: React.FC<{
   children: React.ReactNode;
   footer?: React.ReactNode;
   wide?: boolean;
-}> = ({ title, onClose, children, footer, wide }) => (
-  <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+  printable?: boolean; // à l'impression, seul le contenu .print-area est imprimé
+}> = ({ title, onClose, children, footer, wide, printable }) => (
+  <div className={`fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 ${printable ? 'print-reset' : ''}`}>
     <div
-      className={`bg-white w-full ${wide ? 'max-w-5xl' : 'max-w-2xl'} max-h-[92vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95`}
+      className={`bg-white w-full ${wide ? 'max-w-5xl' : 'max-w-2xl'} max-h-[92vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 ${printable ? 'print-reset' : ''}`}
     >
       <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
         <h2 className="font-bold text-gray-800">{title}</h2>
@@ -38,7 +39,7 @@ export const Modal: React.FC<{
           <X size={20} />
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto p-6">{children}</div>
+      <div className={`flex-1 overflow-y-auto p-6 ${printable ? 'print-reset' : ''}`}>{children}</div>
       {footer && <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">{footer}</div>}
     </div>
   </div>

@@ -1,7 +1,14 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Eye, Pencil, Ban, ArrowRight, AlertCircle, Clock } from 'lucide-react';
-import { OrderStatus, WholesaleCustomer, WholesaleOrder, WholesaleProduct, WholesaleSettings } from '../../types';
+import { Plus, Search, Eye, Pencil, Ban, ArrowRight, AlertCircle, Clock, FileText, Mail } from 'lucide-react';
+import {
+  CompanySettings,
+  OrderStatus,
+  WholesaleCustomer,
+  WholesaleOrder,
+  WholesaleProduct,
+  WholesaleSettings
+} from '../../types';
 import {
   ALLOWED_TRANSITIONS,
   computeTotals,
@@ -12,6 +19,7 @@ import {
   todayISO
 } from '../../services/wholesalePricing';
 import OrderEditor from './OrderEditor';
+import OrderDocument, { DOCUMENT_TITLES, DocumentKind, documentsFor } from './OrderDocument';
 import { Modal, StatusBadge, primaryButton, secondaryButton } from './ui';
 
 // Action principale proposée à chaque étape.
@@ -38,6 +46,7 @@ interface OrdersProps {
   products: WholesaleProduct[];
   customers: WholesaleCustomer[];
   settings: WholesaleSettings;
+  company: CompanySettings;
   startWithCustomer?: string | null;
   onStarted?: () => void;
   onSave: (order: WholesaleOrder, confirm: boolean) => string | null;
@@ -49,6 +58,7 @@ const Orders: React.FC<OrdersProps> = ({
   products,
   customers,
   settings,
+  company,
   startWithCustomer,
   onStarted,
   onSave,
@@ -190,6 +200,7 @@ const Orders: React.FC<OrdersProps> = ({
           order={viewing}
           customer={customers.find(c => c.id === viewing.customerId)}
           settings={settings}
+          company={company}
           today={today}
           error={error}
           onClose={() => {
@@ -224,16 +235,37 @@ const Orders: React.FC<OrdersProps> = ({
   );
 };
 
+// Brouillon de relance ouvert dans la messagerie : rien ne part sans validation.
+const reminderMailto = (order: WholesaleOrder, customer: WholesaleCustomer, company: CompanySettings, totalTTC: number) => {
+  const subject = `Relance facture ${order.invoiceNumber} — ${company.name}`;
+  const body = [
+    `Bonjour${customer.contactName ? ` ${customer.contactName}` : ''},`,
+    '',
+    `Sauf erreur de notre part, la facture ${order.invoiceNumber} du ${formatDate(order.invoiceDate)}, d'un montant de ${formatEUR(totalTTC)} TTC, ` +
+      `est arrivée à échéance le ${formatDate(order.dueDate)} et reste impayée à ce jour.`,
+    '',
+    `Pourriez-vous procéder à son règlement par virement (IBAN ${company.iban}) en indiquant la référence ${order.invoiceNumber} ? ` +
+      'Si le paiement a déjà été effectué, merci de ne pas tenir compte de ce message.',
+    '',
+    'Bien cordialement,',
+    company.name,
+    company.phone
+  ].join('\n');
+  return `mailto:${customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+};
+
 const OrderDetail: React.FC<{
   order: WholesaleOrder;
   customer?: WholesaleCustomer;
   settings: WholesaleSettings;
+  company: CompanySettings;
   today: string;
   error: string | null;
   onClose: () => void;
   onEdit: () => void;
   onChangeStatus: (to: OrderStatus) => void;
-}> = ({ order, customer, settings, today, error, onClose, onEdit, onChangeStatus }) => {
+}> = ({ order, customer, settings, company, today, error, onClose, onEdit, onChangeStatus }) => {
+  const [doc, setDoc] = useState<DocumentKind | null>(null);
   const t = computeTotals(order.lines, settings);
   const next = NEXT_STEP[order.status];
   const canCancel = ALLOWED_TRANSITIONS[order.status].includes(OrderStatus.CANCELED);
@@ -290,6 +322,25 @@ const OrderDetail: React.FC<{
           <StatusBadge status={order.status} />
           {late && <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-red-600 text-white">En retard</span>}
           {order.invoiceNumber && <span className="text-sm text-gray-500">Facture <b className="text-gray-800">{order.invoiceNumber}</b></span>}
+          <div className="ml-auto flex flex-wrap gap-2">
+            {documentsFor(order.status).map(kind => (
+              <button
+                key={kind}
+                onClick={() => setDoc(kind)}
+                className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100"
+              >
+                <FileText size={14} /> {DOCUMENT_TITLES[kind]}
+              </button>
+            ))}
+            {late && customer?.email && (
+              <a
+                href={reminderMailto(order, customer, company, t.totalTTC)}
+                className="flex items-center gap-2 bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-100"
+              >
+                <Mail size={14} /> Préparer une relance
+              </a>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -375,6 +426,10 @@ const OrderDetail: React.FC<{
           </div>
         </div>
       </div>
+
+      {doc && (
+        <OrderDocument kind={doc} order={order} customer={customer} company={company} settings={settings} onClose={() => setDoc(null)} />
+      )}
     </Modal>
   );
 };

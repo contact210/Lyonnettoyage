@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
 import { Boxes } from 'lucide-react';
-import { OrderStatus, WholesaleCustomer, WholesaleOrder, WholesaleProduct } from '../types';
+import { CompanySettings, OrderStatus, WholesaleCustomer, WholesaleOrder, WholesaleProduct } from '../types';
 import {
+  DEFAULT_COMPANY_SETTINGS,
   DEFAULT_WHOLESALE_SETTINGS,
   MOCK_WHOLESALE_CUSTOMERS,
   MOCK_WHOLESALE_ORDERS,
@@ -29,6 +30,7 @@ const Wholesale: React.FC = () => {
   const [customers, setCustomers] = usePersistentState<WholesaleCustomer[]>(`${STORAGE}.customers`, MOCK_WHOLESALE_CUSTOMERS);
   const [orders, setOrders] = usePersistentState<WholesaleOrder[]>(`${STORAGE}.orders`, MOCK_WHOLESALE_ORDERS);
   const [settings] = usePersistentState(`${STORAGE}.settings`, DEFAULT_WHOLESALE_SETTINGS);
+  const [company] = usePersistentState<CompanySettings>(`${STORAGE}.company`, DEFAULT_COMPANY_SETTINGS);
 
   // Applique un changement d'étape (stock, numéro de facture, échéance). Renvoie le message d'erreur éventuel.
   const changeStatus = (order: WholesaleOrder, to: OrderStatus, allOrders = orders): string | null => {
@@ -90,6 +92,7 @@ const Wholesale: React.FC = () => {
           products={products}
           customers={customers}
           settings={settings}
+          company={company}
           startWithCustomer={newOrderFor}
           onStarted={() => setNewOrderFor(null)}
           onSave={saveOrder}

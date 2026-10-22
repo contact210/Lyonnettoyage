@@ -11,6 +11,15 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .leaflet-container { height: 100%; width: 100%; border-radius: 0.75rem; }
+        /* Impression des documents (devis, BL, factures) : seul .print-area sort sur papier */
+        @media print {
+            @page { size: A4; margin: 12mm; }
+            body { background: #fff !important; }
+            body * { visibility: hidden; }
+            .print-reset { position: static !important; overflow: visible !important; max-height: none !important; background: none !important; backdrop-filter: none !important; box-shadow: none !important; animation: none !important; }
+            .print-area, .print-area * { visibility: visible; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-area { position: absolute; left: 0; top: 0; width: 100%; max-width: none !important; }
+        }
     </style>
 <script type="importmap">
 {
