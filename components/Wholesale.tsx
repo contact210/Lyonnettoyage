@@ -14,8 +14,10 @@ import { applyStatusChange, todayISO } from '../services/wholesalePricing';
 import Catalog from './wholesale/Catalog';
 import Customers from './wholesale/Customers';
 import Orders from './wholesale/Orders';
+import Overview from './wholesale/Overview';
+import Settings, { WholesaleBackup } from './wholesale/Settings';
 
-type SubTab = 'orders' | 'catalog' | 'customers';
+type SubTab = 'overview' | 'orders' | 'catalog' | 'customers' | 'settings';
 
 const STORAGE = 'cleanmanager.wholesale.v1';
 
@@ -24,13 +26,13 @@ const upsert = <T extends { id: string }>(list: T[], item: T) =>
   list.some(x => x.id === item.id) ? list.map(x => (x.id === item.id ? item : x)) : [...list, item];
 
 const Wholesale: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('orders');
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('overview');
   const [newOrderFor, setNewOrderFor] = useState<string | null>(null);
   const [products, setProducts] = usePersistentState<WholesaleProduct[]>(`${STORAGE}.products`, MOCK_WHOLESALE_PRODUCTS);
   const [customers, setCustomers] = usePersistentState<WholesaleCustomer[]>(`${STORAGE}.customers`, MOCK_WHOLESALE_CUSTOMERS);
   const [orders, setOrders] = usePersistentState<WholesaleOrder[]>(`${STORAGE}.orders`, MOCK_WHOLESALE_ORDERS);
-  const [settings] = usePersistentState(`${STORAGE}.settings`, DEFAULT_WHOLESALE_SETTINGS);
-  const [company] = usePersistentState<CompanySettings>(`${STORAGE}.company`, DEFAULT_COMPANY_SETTINGS);
+  const [settings, setSettings] = usePersistentState(`${STORAGE}.settings`, DEFAULT_WHOLESALE_SETTINGS);
+  const [company, setCompany] = usePersistentState<CompanySettings>(`${STORAGE}.company`, DEFAULT_COMPANY_SETTINGS);
 
   // Applique un changement d'étape (stock, numéro de facture, échéance). Renvoie le message d'erreur éventuel.
   const changeStatus = (order: WholesaleOrder, to: OrderStatus, allOrders = orders): string | null => {
@@ -56,10 +58,20 @@ const Wholesale: React.FC = () => {
     return confirm ? changeStatus(order, OrderStatus.CONFIRMED, allOrders) : null;
   };
 
+  const restore = (data: WholesaleBackup) => {
+    setProducts(data.products);
+    setCustomers(data.customers);
+    setOrders(data.orders);
+    setSettings(data.settings);
+    setCompany(data.company);
+  };
+
   const tabs: { id: SubTab; label: string }[] = [
+    { id: 'overview', label: "Vue d'ensemble" },
     { id: 'orders', label: 'Commandes' },
     { id: 'catalog', label: 'Catalogue' },
-    { id: 'customers', label: 'Clients pro' }
+    { id: 'customers', label: 'Clients pro' },
+    { id: 'settings', label: 'Réglages' }
   ];
 
   return (
@@ -85,6 +97,10 @@ const Wholesale: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {activeSubTab === 'overview' && (
+        <Overview orders={orders} products={products} settings={settings} onGoTo={setActiveSubTab} />
+      )}
 
       {activeSubTab === 'orders' && (
         <Orders
@@ -114,6 +130,26 @@ const Wholesale: React.FC = () => {
             setNewOrderFor(customerId);
             setActiveSubTab('orders');
           }}
+        />
+      )}
+
+      {activeSubTab === 'settings' && (
+        <Settings
+          settings={settings}
+          company={company}
+          backup={{ products, customers, orders, settings, company }}
+          onSaveSettings={setSettings}
+          onSaveCompany={setCompany}
+          onRestore={restore}
+          onReset={() =>
+            restore({
+              products: MOCK_WHOLESALE_PRODUCTS,
+              customers: MOCK_WHOLESALE_CUSTOMERS,
+              orders: MOCK_WHOLESALE_ORDERS,
+              settings: DEFAULT_WHOLESALE_SETTINGS,
+              company: DEFAULT_COMPANY_SETTINGS
+            })
+          }
         />
       )}
     </div>
