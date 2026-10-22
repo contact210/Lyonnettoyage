@@ -1,8 +1,11 @@
 
 import React, { useMemo, useState } from 'react';
-import { Plus, Search, Mail, Phone, MapPin, Pencil, ShoppingCart, AlertTriangle, Building } from 'lucide-react';
-import { CustomerSegment, OrderStatus, WholesaleCustomer, WholesaleOrder, WholesaleSettings } from '../../types';
+import { Plus, Search, Mail, Phone, MapPin, ShoppingCart, AlertTriangle, Building, Clock, IdCard } from 'lucide-react';
+import { Activity, CrmTask, CustomerSegment, OrderStatus, WholesaleCustomer, WholesaleOrder, WholesaleSettings } from '../../types';
 import { computeTotals, formatDate, formatEUR, isOverdue, todayISO } from '../../services/wholesalePricing';
+import { CustomerHealth, customerInsights, nextTaskFor } from '../../services/wholesaleCrm';
+import { LogInput, dueClass } from './CrmShared';
+import CustomerProfile, { HealthBadge } from './CustomerProfile';
 import { Field, Modal, inputClass, newId, parseNumber, primaryButton, secondaryButton } from './ui';
 
 const SEGMENT_COLORS: Record<CustomerSegment, string> = {
@@ -18,13 +21,29 @@ interface CustomersProps {
   customers: WholesaleCustomer[];
   orders: WholesaleOrder[];
   settings: WholesaleSettings;
+  activities: Activity[];
+  tasks: CrmTask[];
   onSave: (customer: WholesaleCustomer) => void;
   onNewOrder?: (customerId: string) => void;
+  onLog: (ref: { customerId: string }, input: LogInput) => void;
+  onAddTask: (ref: { customerId: string }, title: string, dueDate: string) => void;
+  onCompleteTask: (task: CrmTask) => void;
 }
 
-const Customers: React.FC<CustomersProps> = ({ customers, orders, settings, onSave, onNewOrder }) => {
+const HEALTH_FILTERS: (CustomerHealth | 'all')[] = ['all', 'Actif', 'À relancer', 'Inactif', 'Sans commande'];
+
+const Customers: React.FC<CustomersProps> = props => {
+  const { customers, orders, settings, onSave, onNewOrder, activities, tasks } = props;
   const [query, setQuery] = useState('');
+  const [health, setHealth] = useState<CustomerHealth | 'all'>('all');
   const [editing, setEditing] = useState<WholesaleCustomer | 'new' | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const today = todayISO();
+  const healthOf = useMemo(
+    () => new Map(customers.map(c => [c.id, customerInsights(c.id, orders, settings, today).health])),
+    [customers, orders, settings, today]
+  );
+  const profile = customers.find(c => c.id === profileId);
 
   const stats = useMemo(() => {
     const today = todayISO();
@@ -49,6 +68,7 @@ const Customers: React.FC<CustomersProps> = ({ customers, orders, settings, onSa
       const q = query.trim().toLowerCase();
       return !q || c.companyName.toLowerCase().includes(q) || c.contactName.toLowerCase().includes(q) || c.siret.replace(/\s/g, '').includes(q.replace(/\s/g, ''));
     })
+    .filter(c => health === 'all' || healthOf.get(c.id) === health)
     .sort((a, b) => a.companyName.localeCompare(b.companyName, 'fr'));
 
   return (
@@ -68,9 +88,24 @@ const Customers: React.FC<CustomersProps> = ({ customers, orders, settings, onSa
         </button>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {HEALTH_FILTERS.map(h => (
+          <button
+            key={h}
+            onClick={() => setHealth(h)}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
+              health === h ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            {h === 'all' ? 'Tous' : h} <span className="opacity-70">{h === 'all' ? customers.length : [...healthOf.values()].filter(x => x === h).length}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {visible.map(c => {
           const s = stats.get(c.id);
+          const next = nextTaskFor(tasks, { customerId: c.id });
           return (
             <div key={c.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:border-indigo-200 transition-all flex flex-col">
               <div className="p-6 flex-1">
@@ -78,7 +113,10 @@ const Customers: React.FC<CustomersProps> = ({ customers, orders, settings, onSa
                   <div className="bg-indigo-50 p-2.5 rounded-lg">
                     <Building className="text-indigo-600" size={20} />
                   </div>
-                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${SEGMENT_COLORS[c.segment]}`}>{c.segment}</span>
+                  <div className="flex flex-wrap justify-end gap-1">
+                    <HealthBadge health={healthOf.get(c.id) ?? 'Sans commande'} />
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${SEGMENT_COLORS[c.segment]}`}>{c.segment}</span>
+                  </div>
                 </div>
                 <h3 className="text-lg font-bold">{c.companyName}</h3>
                 <p className="text-xs text-gray-400 font-mono">SIRET {c.siret}</p>
@@ -113,13 +151,18 @@ const Customers: React.FC<CustomersProps> = ({ customers, orders, settings, onSa
                     À encaisser : {formatEUR(s.dueTTC)} TTC{s.overdue && ' · en retard'}
                   </p>
                 )}
+                {next && (
+                  <p className={`text-xs mt-1 flex items-center gap-1 ${dueClass(next.dueDate, today)}`}>
+                    <Clock size={12} className="shrink-0" /> <b>{formatDate(next.dueDate)}</b> <span className="truncate text-gray-600">{next.title}</span>
+                  </p>
+                )}
               </div>
               <div className="bg-gray-50 p-4 border-t border-gray-100 flex gap-2">
                 <button
-                  onClick={() => setEditing(c)}
+                  onClick={() => setProfileId(c.id)}
                   className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-600 py-2 rounded-lg text-xs font-bold border border-gray-200 hover:bg-gray-50 transition-colors"
                 >
-                  <Pencil size={14} /> Modifier
+                  <IdCard size={14} /> Fiche client
                 </button>
                 {onNewOrder && (
                   <button
@@ -137,6 +180,25 @@ const Customers: React.FC<CustomersProps> = ({ customers, orders, settings, onSa
           <p className="col-span-full text-center text-sm text-gray-400 py-12">Aucun client ne correspond à cette recherche.</p>
         )}
       </div>
+
+      {profile && (
+        <CustomerProfile
+          customer={profile}
+          orders={orders}
+          activities={activities.filter(a => a.customerId === profile.id)}
+          tasks={tasks.filter(t => t.customerId === profile.id)}
+          settings={settings}
+          onEdit={() => {
+            setEditing(profile);
+            setProfileId(null);
+          }}
+          onNewOrder={onNewOrder ? () => onNewOrder(profile.id) : undefined}
+          onLog={input => props.onLog({ customerId: profile.id }, input)}
+          onAddTask={(title, date) => props.onAddTask({ customerId: profile.id }, title, date)}
+          onCompleteTask={props.onCompleteTask}
+          onClose={() => setProfileId(null)}
+        />
+      )}
 
       {editing && (
         <CustomerForm

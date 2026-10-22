@@ -331,8 +331,13 @@ const Wholesale: React.FC = () => {
           customers={customers}
           orders={orders}
           settings={settings}
+          activities={activities}
+          tasks={crmTasks}
           onSave={c => setCustomers(list => upsert(list, c))}
           onNewOrder={startQuote}
+          onLog={crmActions.onLog}
+          onAddTask={crmActions.onAddTask}
+          onCompleteTask={crmActions.onCompleteTask}
         />
       )}
 
