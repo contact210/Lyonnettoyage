@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Search, Mail, Phone, MapPin, Pencil, ShoppingCart, AlertTriangle, Building } from 'lucide-react';
 import { CustomerSegment, OrderStatus, WholesaleCustomer, WholesaleOrder, WholesaleSettings } from '../../types';
-import { computeTotals, formatDate, formatEUR } from '../../services/wholesalePricing';
+import { computeTotals, formatDate, formatEUR, isOverdue, todayISO } from '../../services/wholesalePricing';
 import { Field, Modal, inputClass, newId, parseNumber, primaryButton, secondaryButton } from './ui';
 
 const SEGMENT_COLORS: Record<CustomerSegment, string> = {
@@ -27,13 +27,17 @@ const Customers: React.FC<CustomersProps> = ({ customers, orders, settings, onSa
   const [editing, setEditing] = useState<WholesaleCustomer | 'new' | null>(null);
 
   const stats = useMemo(() => {
-    const map = new Map<string, { revenueHT: number; count: number; lastDate?: string }>();
+    const today = todayISO();
+    const map = new Map<string, { revenueHT: number; dueTTC: number; overdue: boolean; count: number; lastDate?: string }>();
     orders
       .filter(o => o.status !== OrderStatus.CANCELED && o.status !== OrderStatus.QUOTE)
       .forEach(o => {
-        const s = map.get(o.customerId) ?? { revenueHT: 0, count: 0 };
+        const s = map.get(o.customerId) ?? { revenueHT: 0, dueTTC: 0, overdue: false, count: 0 };
+        const totals = computeTotals(o.lines, settings);
         s.count += 1;
-        if (o.status === OrderStatus.INVOICED) s.revenueHT += computeTotals(o.lines, settings).totalHT;
+        if (o.status === OrderStatus.INVOICED || o.status === OrderStatus.PAID) s.revenueHT += totals.totalHT;
+        if (o.status === OrderStatus.INVOICED) s.dueTTC += totals.totalTTC;
+        if (isOverdue(o, today)) s.overdue = true;
         if (!s.lastDate || o.date > s.lastDate) s.lastDate = o.date;
         map.set(o.customerId, s);
       });
@@ -104,6 +108,11 @@ const Customers: React.FC<CustomersProps> = ({ customers, orders, settings, onSa
                   Facturé : <span className="font-bold text-gray-800">{formatEUR(s?.revenueHT ?? 0)} HT</span>
                   {s?.lastDate && <> · dernière commande le {formatDate(s.lastDate)}</>}
                 </p>
+                {!!s?.dueTTC && (
+                  <p className={`text-xs mt-1 font-bold ${s.overdue ? 'text-red-600' : 'text-amber-600'}`}>
+                    À encaisser : {formatEUR(s.dueTTC)} TTC{s.overdue && ' · en retard'}
+                  </p>
+                )}
               </div>
               <div className="bg-gray-50 p-4 border-t border-gray-100 flex gap-2">
                 <button

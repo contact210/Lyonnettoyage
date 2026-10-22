@@ -5,6 +5,7 @@ import {
   buildLine,
   checkOrder,
   computeTotals,
+  isOverdue,
   nextNumber,
   round2,
   tierFor,
@@ -168,6 +169,21 @@ describe('cycle de vie', () => {
     expect(order.invoiceNumber).toBe('FAC-G-2026-0002');
     expect(order.invoiceDate).toBe('2026-10-22');
     expect(order.dueDate).toBe('2026-12-06'); // + 45 jours
+  });
+
+  it('enregistre le paiement et garde le stock sorti', () => {
+    const invoiced = quote({ status: OrderStatus.INVOICED, dueDate: '2026-11-30' });
+    const { order, products } = applyStatusChange(invoiced, OrderStatus.PAID, ctx);
+    expect(order.paidDate).toBe('2026-10-22');
+    expect(stockOf(products)).toBe(140);
+    expect(() => applyStatusChange(order, OrderStatus.CANCELED, ctx)).toThrow('Passage impossible');
+  });
+
+  it('repère les factures en retard', () => {
+    const invoiced = quote({ status: OrderStatus.INVOICED, dueDate: '2026-10-21' });
+    expect(isOverdue(invoiced, '2026-10-22')).toBe(true);
+    expect(isOverdue(invoiced, '2026-10-21')).toBe(false);
+    expect(isOverdue({ ...invoiced, status: OrderStatus.PAID }, '2026-12-01')).toBe(false);
   });
 });
 

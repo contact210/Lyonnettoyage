@@ -50,6 +50,7 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
   [OrderStatus.PREPARED]: 'bg-amber-100 text-amber-700',
   [OrderStatus.DELIVERED]: 'bg-purple-100 text-purple-700',
   [OrderStatus.INVOICED]: 'bg-indigo-100 text-indigo-700',
+  [OrderStatus.PAID]: 'bg-green-100 text-green-700',
   [OrderStatus.CANCELED]: 'bg-red-100 text-red-700'
 };
 

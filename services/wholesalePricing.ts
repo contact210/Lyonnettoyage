@@ -208,7 +208,8 @@ export const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.CONFIRMED]: [OrderStatus.PREPARED, OrderStatus.CANCELED],
   [OrderStatus.PREPARED]: [OrderStatus.DELIVERED, OrderStatus.CANCELED],
   [OrderStatus.DELIVERED]: [OrderStatus.INVOICED],
-  [OrderStatus.INVOICED]: [],
+  [OrderStatus.INVOICED]: [OrderStatus.PAID],
+  [OrderStatus.PAID]: [],
   [OrderStatus.CANCELED]: []
 };
 
@@ -217,7 +218,11 @@ export const holdsStock = (status: OrderStatus) =>
   status === OrderStatus.CONFIRMED ||
   status === OrderStatus.PREPARED ||
   status === OrderStatus.DELIVERED ||
-  status === OrderStatus.INVOICED;
+  status === OrderStatus.INVOICED ||
+  status === OrderStatus.PAID;
+
+export const isOverdue = (order: WholesaleOrder, today: string) =>
+  order.status === OrderStatus.INVOICED && !!order.dueDate && order.dueDate < today;
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -276,6 +281,10 @@ export const applyStatusChange = (
     updated.invoiceNumber = nextNumber(INVOICE_PREFIX, ctx.orders.map(o => o.invoiceNumber), year);
     updated.invoiceDate = ctx.today;
     updated.dueDate = addDays(ctx.today, ctx.customer?.paymentTermsDays ?? 30);
+  }
+
+  if (to === OrderStatus.PAID) {
+    updated.paidDate = ctx.today;
   }
 
   return { order: updated, products };

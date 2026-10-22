@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Boxes } from 'lucide-react';
-import { WholesaleCustomer, WholesaleOrder, WholesaleProduct } from '../types';
+import { OrderStatus, WholesaleCustomer, WholesaleOrder, WholesaleProduct } from '../types';
 import {
   DEFAULT_WHOLESALE_SETTINGS,
   MOCK_WHOLESALE_CUSTOMERS,
@@ -9,10 +9,12 @@ import {
   MOCK_WHOLESALE_PRODUCTS
 } from '../constants';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { applyStatusChange, todayISO } from '../services/wholesalePricing';
 import Catalog from './wholesale/Catalog';
 import Customers from './wholesale/Customers';
+import Orders from './wholesale/Orders';
 
-type SubTab = 'catalog' | 'customers';
+type SubTab = 'orders' | 'catalog' | 'customers';
 
 const STORAGE = 'cleanmanager.wholesale.v1';
 
@@ -21,13 +23,39 @@ const upsert = <T extends { id: string }>(list: T[], item: T) =>
   list.some(x => x.id === item.id) ? list.map(x => (x.id === item.id ? item : x)) : [...list, item];
 
 const Wholesale: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('catalog');
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('orders');
+  const [newOrderFor, setNewOrderFor] = useState<string | null>(null);
   const [products, setProducts] = usePersistentState<WholesaleProduct[]>(`${STORAGE}.products`, MOCK_WHOLESALE_PRODUCTS);
   const [customers, setCustomers] = usePersistentState<WholesaleCustomer[]>(`${STORAGE}.customers`, MOCK_WHOLESALE_CUSTOMERS);
-  const [orders] = usePersistentState<WholesaleOrder[]>(`${STORAGE}.orders`, MOCK_WHOLESALE_ORDERS);
+  const [orders, setOrders] = usePersistentState<WholesaleOrder[]>(`${STORAGE}.orders`, MOCK_WHOLESALE_ORDERS);
   const [settings] = usePersistentState(`${STORAGE}.settings`, DEFAULT_WHOLESALE_SETTINGS);
 
+  // Applique un changement d'étape (stock, numéro de facture, échéance). Renvoie le message d'erreur éventuel.
+  const changeStatus = (order: WholesaleOrder, to: OrderStatus, allOrders = orders): string | null => {
+    try {
+      const result = applyStatusChange(order, to, {
+        products,
+        orders: allOrders,
+        customer: customers.find(c => c.id === order.customerId),
+        settings,
+        today: todayISO()
+      });
+      setOrders(list => upsert(list, result.order));
+      setProducts(result.products);
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : String(e);
+    }
+  };
+
+  const saveOrder = (order: WholesaleOrder, confirm: boolean) => {
+    const allOrders = upsert(orders, order);
+    setOrders(allOrders);
+    return confirm ? changeStatus(order, OrderStatus.CONFIRMED, allOrders) : null;
+  };
+
   const tabs: { id: SubTab; label: string }[] = [
+    { id: 'orders', label: 'Commandes' },
     { id: 'catalog', label: 'Catalogue' },
     { id: 'customers', label: 'Clients pro' }
   ];
@@ -56,6 +84,19 @@ const Wholesale: React.FC = () => {
         </div>
       </div>
 
+      {activeSubTab === 'orders' && (
+        <Orders
+          orders={orders}
+          products={products}
+          customers={customers}
+          settings={settings}
+          startWithCustomer={newOrderFor}
+          onStarted={() => setNewOrderFor(null)}
+          onSave={saveOrder}
+          onChangeStatus={changeStatus}
+        />
+      )}
+
       {activeSubTab === 'catalog' && (
         <Catalog products={products} settings={settings} onSave={p => setProducts(list => upsert(list, p))} />
       )}
@@ -66,6 +107,10 @@ const Wholesale: React.FC = () => {
           orders={orders}
           settings={settings}
           onSave={c => setCustomers(list => upsert(list, c))}
+          onNewOrder={customerId => {
+            setNewOrderFor(customerId);
+            setActiveSubTab('orders');
+          }}
         />
       )}
     </div>

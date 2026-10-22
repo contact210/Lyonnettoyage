@@ -142,6 +142,7 @@ export enum OrderStatus {
   PREPARED = 'Préparée',
   DELIVERED = 'Livrée',
   INVOICED = 'Facturée',
+  PAID = 'Payée',
   CANCELED = 'Annulée'
 }
 
@@ -173,6 +174,7 @@ export interface WholesaleOrder {
   invoiceNumber?: string;
   invoiceDate?: string;
   dueDate?: string;
+  paidDate?: string;
   history: OrderEvent[];
 }
 
