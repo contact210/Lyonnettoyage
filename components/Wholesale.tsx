@@ -6,6 +6,7 @@ import {
   OrderStatus,
   PurchaseOrder,
   StockMovement,
+  StockMovementType,
   Supplier,
   WholesaleCustomer,
   WholesaleOrder,
@@ -22,13 +23,17 @@ import {
   MOCK_WHOLESALE_PRODUCTS
 } from '../constants';
 import { usePersistentState } from '../hooks/usePersistentState';
-import { applyStatusChange, todayISO } from '../services/wholesalePricing';
+import { applyStatusChange, newId, todayISO } from '../services/wholesalePricing';
 import {
+  AdjustmentKind,
+  adjustStock,
   cancelPurchase,
+  draftPurchase,
   markPurchaseOrdered,
   markPurchasePaid,
   receivePurchase,
-  recordSupplierInvoice
+  recordSupplierInvoice,
+  reservedQuantities
 } from '../services/wholesaleStock';
 import Catalog from './wholesale/Catalog';
 import Customers from './wholesale/Customers';
@@ -36,9 +41,10 @@ import Orders from './wholesale/Orders';
 import Overview from './wholesale/Overview';
 import Purchases from './wholesale/Purchases';
 import Settings, { WholesaleBackup } from './wholesale/Settings';
+import Stock from './wholesale/Stock';
 import Suppliers from './wholesale/Suppliers';
 
-type SubTab = 'overview' | 'orders' | 'customers' | 'purchases' | 'suppliers' | 'catalog' | 'settings';
+type SubTab = 'overview' | 'orders' | 'customers' | 'purchases' | 'suppliers' | 'stock' | 'catalog' | 'settings';
 
 const STORAGE = 'cleanmanager.wholesale.v1';
 
@@ -124,6 +130,45 @@ const Wholesale: React.FC = () => {
     onPay: (purchase: PurchaseOrder) => savePurchase(() => markPurchasePaid(purchase, todayISO()))
   };
 
+  const saveProduct = (product: WholesaleProduct) => {
+    const isNew = !products.some(p => p.id === product.id);
+    setProducts(list => upsert(list, product));
+    if (isNew && product.stock > 0) {
+      setMovements(list => [
+        ...list,
+        {
+          id: newId('mvt'),
+          date: todayISO(),
+          productId: product.id,
+          sku: product.sku,
+          type: StockMovementType.INITIAL,
+          quantity: product.stock,
+          unitCost: product.costPrice,
+          stockAfter: product.stock
+        }
+      ]);
+    }
+  };
+
+  const adjust = (product: WholesaleProduct, adjustment: { kind: AdjustmentKind; quantity: number; note?: string }) =>
+    attempt(() => {
+      const result = adjustStock(product, adjustment, {
+        reserved: reservedQuantities(orders).get(product.id) ?? 0,
+        today: todayISO()
+      });
+      setProducts(list => upsert(list, result.product));
+      setMovements(list => [...list, result.movement]);
+    });
+
+  const createDraftPurchase = (supplierId: string, items: { product: WholesaleProduct; quantity: number }[]) => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (!supplier) return;
+    const draft = draftPurchase(supplier, items, { purchases, today: todayISO() });
+    setPurchases(list => [...list, draft]);
+    setPurchaseFocus({ purchaseId: draft.id });
+    setActiveSubTab('purchases');
+  };
+
   const restore = (data: WholesaleBackup) => {
     setProducts(data.products);
     setCustomers(data.customers);
@@ -138,6 +183,7 @@ const Wholesale: React.FC = () => {
     { id: 'customers', label: 'Clients' },
     { id: 'purchases', label: 'Achats' },
     { id: 'suppliers', label: 'Fournisseurs' },
+    { id: 'stock', label: 'Stock' },
     { id: 'catalog', label: 'Catalogue' },
     { id: 'settings', label: 'Réglages' }
   ];
@@ -184,8 +230,20 @@ const Wholesale: React.FC = () => {
         />
       )}
 
+      {activeSubTab === 'stock' && (
+        <Stock
+          products={products}
+          orders={orders}
+          purchases={purchases}
+          suppliers={suppliers}
+          movements={movements}
+          onAdjust={adjust}
+          onCreateDraft={createDraftPurchase}
+        />
+      )}
+
       {activeSubTab === 'catalog' && (
-        <Catalog products={products} settings={settings} onSave={p => setProducts(list => upsert(list, p))} />
+        <Catalog products={products} suppliers={suppliers} settings={settings} onSave={saveProduct} />
       )}
 
       {activeSubTab === 'customers' && (

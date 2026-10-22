@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Plus, Search, Package, AlertTriangle, Trash2, Pencil } from 'lucide-react';
-import { ProductCategory, WholesaleProduct, WholesaleSettings } from '../../types';
+import { ProductCategory, Supplier, WholesaleProduct, WholesaleSettings } from '../../types';
 import { basePrice, formatEUR, marginRate, sortedTiers } from '../../services/wholesalePricing';
 import {
   Field,
@@ -27,11 +27,12 @@ export const CATEGORIES: ProductCategory[] = [
 
 interface CatalogProps {
   products: WholesaleProduct[];
+  suppliers: Supplier[];
   settings: WholesaleSettings;
   onSave: (product: WholesaleProduct) => void;
 }
 
-const Catalog: React.FC<CatalogProps> = ({ products, settings, onSave }) => {
+const Catalog: React.FC<CatalogProps> = ({ products, suppliers, settings, onSave }) => {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<ProductCategory | 'all'>('all');
   const [onlyAlerts, setOnlyAlerts] = useState(false);
@@ -57,7 +58,7 @@ const Catalog: React.FC<CatalogProps> = ({ products, settings, onSave }) => {
           <h3 className="text-2xl font-black">{products.filter(p => p.active).length}</h3>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Valeur du stock (achat HT)</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Stock disponible (au CMP)</p>
           <h3 className="text-2xl font-black text-indigo-600">{formatEUR(stockValue)}</h3>
         </div>
         <button
@@ -109,7 +110,7 @@ const Catalog: React.FC<CatalogProps> = ({ products, settings, onSave }) => {
               <tr>
                 <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase">Produit</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase">Prix de vente HT par palier</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">Achat HT</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">Coût (CMP)</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">Marge</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase text-right">Stock</th>
                 <th className="px-6 py-3"></th>
@@ -144,7 +145,12 @@ const Catalog: React.FC<CatalogProps> = ({ products, settings, onSave }) => {
                         ))}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-600">{formatEUR(p.costPrice)}</td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="text-sm text-gray-600">{formatEUR(p.costPrice)}</p>
+                      {p.lastPurchasePrice !== undefined && (
+                        <p className="text-[10px] text-gray-400 whitespace-nowrap">dernier achat {formatEUR(p.lastPurchasePrice)}</p>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <span className={`text-sm font-bold ${rate < settings.minMarginRate ? 'text-red-600' : 'text-green-600'}`}>
                         {rate.toLocaleString('fr-FR')} %
@@ -186,6 +192,7 @@ const Catalog: React.FC<CatalogProps> = ({ products, settings, onSave }) => {
         <ProductForm
           product={editing === 'new' ? undefined : editing}
           products={products}
+          suppliers={suppliers}
           settings={settings}
           onCancel={() => setEditing(null)}
           onSave={p => {
@@ -206,10 +213,11 @@ interface TierDraft {
 const ProductForm: React.FC<{
   product?: WholesaleProduct;
   products: WholesaleProduct[];
+  suppliers: Supplier[];
   settings: WholesaleSettings;
   onCancel: () => void;
   onSave: (product: WholesaleProduct) => void;
-}> = ({ product, products, settings, onCancel, onSave }) => {
+}> = ({ product, products, suppliers, settings, onCancel, onSave }) => {
   const [name, setName] = useState(product?.name ?? '');
   const [sku, setSku] = useState(product?.sku ?? '');
   const [category, setCategory] = useState<ProductCategory>(product?.category ?? 'Sols');
@@ -219,6 +227,7 @@ const ProductForm: React.FC<{
   const [stock, setStock] = useState(String(product?.stock ?? 0));
   const [minStock, setMinStock] = useState(String(product?.minStock ?? 10));
   const [active, setActive] = useState(product?.active ?? true);
+  const [supplierId, setSupplierId] = useState(product?.supplierId ?? '');
   const [tiers, setTiers] = useState<TierDraft[]>(
     product
       ? sortedTiers(product).map(t => ({ minQty: String(t.minQty), unitPrice: String(t.unitPrice) }))
@@ -252,7 +261,8 @@ const ProductForm: React.FC<{
     }
     if (!parsedTiers.some(t => t.minQty === 1)) problems.push('Il faut un prix de base (palier « dès 1 »).');
 
-    const parsedStock = parseNumber(stock);
+    // Le stock d'un produit existant ne bouge que par des mouvements (onglet Stock).
+    const parsedStock = product ? product.stock : parseNumber(stock);
     const parsedMin = parseNumber(minStock);
     if (!Number.isInteger(parsedStock) || parsedStock < 0) problems.push('Le stock doit être un entier positif.');
     if (!Number.isInteger(parsedMin) || parsedMin < 0) problems.push("Le seuil d'alerte doit être un entier positif.");
@@ -271,7 +281,9 @@ const ProductForm: React.FC<{
       vatRate: Number(vatRate),
       stock: parsedStock,
       minStock: parsedMin,
-      active
+      active,
+      supplierId: supplierId || undefined,
+      lastPurchasePrice: product?.lastPurchasePrice ?? cost
     });
   };
 
@@ -317,11 +329,20 @@ const ProductForm: React.FC<{
               <option value="5.5">5,5 %</option>
             </select>
           </Field>
-          <Field label="Prix d'achat HT (€)">
+          <Field label="Fournisseur principal" className="md:col-span-3">
+            <select className={inputClass} value={supplierId} onChange={e => setSupplierId(e.target.value)}>
+              <option value="">Aucun</option>
+              {suppliers.map(s => <option key={s.id} value={s.id}>{s.companyName}</option>)}
+            </select>
+          </Field>
+          <Field
+            label={product ? 'Coût moyen pondéré HT (€)' : "Coût d'achat HT (€)"}
+            hint={product ? 'Recalculé à chaque réception. Ne corrigez qu’en cas d’erreur.' : undefined}
+          >
             <input className={inputClass} inputMode="decimal" value={costPrice} onChange={e => setCostPrice(e.target.value)} placeholder="9,80" />
           </Field>
-          <Field label="Stock actuel">
-            <input className={inputClass} inputMode="numeric" value={stock} onChange={e => setStock(e.target.value)} />
+          <Field label={product ? 'Stock disponible' : 'Stock initial'} hint={product ? 'Se modifie dans l’onglet Stock (inventaire, perte…).' : undefined}>
+            <input className={`${inputClass} ${product ? 'text-gray-400' : ''}`} inputMode="numeric" value={stock} disabled={!!product} onChange={e => setStock(e.target.value)} />
           </Field>
           <Field label="Seuil d'alerte" hint="Alerte « stock bas » à ce niveau.">
             <input className={inputClass} inputMode="numeric" value={minStock} onChange={e => setMinStock(e.target.value)} />
