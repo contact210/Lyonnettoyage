@@ -28,8 +28,9 @@ import Customers from './wholesale/Customers';
 import Orders from './wholesale/Orders';
 import Overview from './wholesale/Overview';
 import Settings, { WholesaleBackup } from './wholesale/Settings';
+import Suppliers from './wholesale/Suppliers';
 
-type SubTab = 'overview' | 'orders' | 'catalog' | 'customers' | 'settings';
+type SubTab = 'overview' | 'orders' | 'customers' | 'suppliers' | 'catalog' | 'settings';
 
 const STORAGE = 'cleanmanager.wholesale.v1';
 
@@ -84,22 +85,23 @@ const Wholesale: React.FC = () => {
 
   const tabs: { id: SubTab; label: string }[] = [
     { id: 'overview', label: "Vue d'ensemble" },
-    { id: 'orders', label: 'Commandes' },
+    { id: 'orders', label: 'Ventes' },
+    { id: 'customers', label: 'Clients' },
+    { id: 'suppliers', label: 'Fournisseurs' },
     { id: 'catalog', label: 'Catalogue' },
-    { id: 'customers', label: 'Clients pro' },
     { id: 'settings', label: 'Réglages' }
   ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
+      <div className="space-y-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Boxes className="text-indigo-600" /> Vente en gros
           </h1>
-          <p className="text-sm text-gray-500">Produits d'entretien pour les professionnels : catalogue, clients, commandes et factures</p>
+          <p className="text-sm text-gray-500">Produits d'entretien pour les professionnels : achats, stock, ventes et rentabilité</p>
         </div>
-        <div className="bg-gray-100 p-1 rounded-lg flex gap-1 overflow-x-auto">
+        <div className="bg-gray-100 p-1 rounded-lg inline-flex flex-wrap gap-1">
           {tabs.map(t => (
             <button
               key={t.id}
@@ -146,6 +148,15 @@ const Wholesale: React.FC = () => {
             setNewOrderFor(customerId);
             setActiveSubTab('orders');
           }}
+        />
+      )}
+
+      {activeSubTab === 'suppliers' && (
+        <Suppliers
+          suppliers={suppliers}
+          purchases={purchases}
+          products={products}
+          onSave={s => setSuppliers(list => upsert(list, s))}
         />
       )}
 
