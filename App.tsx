@@ -12,7 +12,8 @@ import {
   Search,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  Boxes
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import EmployeeManager from './components/EmployeeManager';
@@ -21,6 +22,7 @@ import MapModule from './components/MapModule';
 import Planner from './components/Planner';
 import Financials from './components/Financials';
 import AIAssistant from './components/AIAssistant';
+import Wholesale from './components/Wholesale';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -33,6 +35,7 @@ const App: React.FC = () => {
     { id: 'planning', label: 'Planning', icon: Calendar },
     { id: 'map', label: 'Carte GIS', icon: MapIcon },
     { id: 'financials', label: 'Finance & Factures', icon: Euro },
+    { id: 'wholesale', label: 'Vente en gros', icon: Boxes },
     { id: 'ai-assistant', label: 'Assistant IA', icon: Sparkles },
   ];
 
@@ -44,6 +47,7 @@ const App: React.FC = () => {
       case 'planning': return <Planner />;
       case 'map': return <MapModule />;
       case 'financials': return <Financials />;
+      case 'wholesale': return <Wholesale />;
       case 'ai-assistant': return <AIAssistant />;
       default: return <Dashboard />;
     }
