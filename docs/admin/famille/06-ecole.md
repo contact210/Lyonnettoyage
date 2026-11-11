@@ -1,6 +1,8 @@
 # École — maternelle et élémentaire (Ville de Lyon)
 
-L'instruction est **obligatoire dès 3 ans**. À Lyon, l'école publique dépend de **deux acteurs** :
+L'instruction est **obligatoire dès 3 ans**. À Lyon, la semaine d'école dure **4 jours : pas de classe le mercredi**. Le mercredi matin, la Ville propose les **Ateliers du mercredi** (8h30-12h, à l'école ou dans une école proche, tarif selon le quotient familial municipal), auxquels on s'inscrit en même temps qu'à la cantine.
+
+L'école publique dépend de **deux acteurs** :
 
 | Sujet | Qui s'en occupe | Où |
 |-------|-----------------|----|
